@@ -1,0 +1,5 @@
+{
+  "name": "Periodica Clone",
+  "description": "A photobook layout editor featuring drag-and-drop photo placement, custom page layouts, and spread management similar to Periodica.press.",
+  "requestFramePermissions": []
+}
