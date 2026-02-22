@@ -344,9 +344,8 @@ export const PageRenderer: React.FC<PageRendererProps> = ({
                   fontStyle: settings.fontStyle || 'normal',
                   lineHeight: settings.lineHeight || 1.4,
                   // If exporting, use absolute pixels for letter spacing to avoid kerning drift
-                  // +0.1px crutch slightly expands the html2canvas vector measuring engine which measures WebFonts narrower than raw Blink
                   letterSpacing: isExporting
-                    ? (settings.letterSpacing ? `${(settings.letterSpacing * parseFloat(exportFontSize)) + 0.1}px` : '0.1px')
+                    ? (settings.letterSpacing ? `${(settings.letterSpacing * parseFloat(exportFontSize))}px` : 'normal')
                     : (settings.letterSpacing ? `${settings.letterSpacing}em` : 'normal'),
                   color: settings.color || theme.colors.text,
                   textAlign: alignMode,
@@ -354,7 +353,12 @@ export const PageRenderer: React.FC<PageRendererProps> = ({
                   whiteSpace: 'pre-wrap', // Always pre-wrap for text slots
                   wordBreak: 'break-word',
                   overflowWrap: 'break-word',
-                  padding: isExporting ? '2%' : '2cqw', // use % in export to match container
+                  // In export, the page is 1200px. 2cqw = 2% of 1200px = 24px exactly.
+                  // Using % would be relative to the slot, not the page, causing discrepancies.
+                  padding: isExporting ? '24px' : '2cqw',
+                  // Force crisp antialiasing in both editor and canvas export to match WebKit text wrapping geometry linearly
+                  textRendering: 'geometricPrecision',
+                  WebkitFontSmoothing: 'antialiased',
                 };
 
                 return (
