@@ -343,10 +343,10 @@ export const PageRenderer: React.FC<PageRendererProps> = ({
                   fontWeight: settings.fontWeight || 'normal',
                   fontStyle: settings.fontStyle || 'normal',
                   lineHeight: settings.lineHeight || 1.4,
-                  // If exporting, use absolute pixels for letter spacing to avoid kerning drift. 
-                  // Specifically apply a microscopic -0.15px kerning nudge to counter html2canvas text expanding vector drift.
+                  // If exporting, use absolute pixels for letter spacing to avoid kerning drift
+                  // +0.1px crutch slightly expands the html2canvas vector measuring engine which measures WebFonts narrower than raw Blink
                   letterSpacing: isExporting
-                    ? (settings.letterSpacing ? `${(settings.letterSpacing * parseFloat(exportFontSize)) - 0.15}px` : '-0.15px')
+                    ? (settings.letterSpacing ? `${(settings.letterSpacing * parseFloat(exportFontSize)) + 0.1}px` : '0.1px')
                     : (settings.letterSpacing ? `${settings.letterSpacing}em` : 'normal'),
                   color: settings.color || theme.colors.text,
                   textAlign: alignMode,
