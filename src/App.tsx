@@ -6,288 +6,119 @@ import { ThemeSelection } from './components/ThemeSelection';
 import { Dashboard } from './components/Dashboard';
 import { AdminPanel } from './components/AdminPanel';
 import { Icons } from './components/IconComponents';
-import { Spread, PageData, PageContent, SidebarTab, UploadedImage, SlotSettings, ThemeConfig, PageType, LayoutTemplate, SlotType, AppView, Project } from './types';
+import { LayoutTemplate, SlotType } from './types';
 import { LAYOUTS as STATIC_LAYOUTS } from './constants';
-import { THEMES } from './themes';
-import { generateId, deepClone, normalizeLayoutRects } from './utils';
+import { normalizeLayoutRects } from './utils';
+import PDFExporter from './components/PDFExporter';
 
-const createPage = (type: PageType = 'content', layoutId = 'full_photo'): PageData => ({
-  id: generateId(),
-  layoutId,
-  type,
-  content: {},
-  slotSettings: {}
-});
-
-const createSpread = (leftType: PageType, rightType: PageType): Spread => ({
-  id: generateId(),
-  leftPage: createPage(leftType),
-  rightPage: createPage(rightType),
-});
+// Hooks
+import { useProjects } from './hooks/useProjects';
+import { useImages } from './hooks/useImages';
+import { useEditor } from './hooks/useEditor';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<AppView>('dashboard');
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
-  const [currentTheme, setCurrentTheme] = useState<ThemeConfig | null>(null);
-  const [activeTab, setActiveTab] = useState<SidebarTab>('gallery');
-  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
-  const [selectedSlot, setSelectedSlot] = useState<{ id: string; side: 'left' | 'right'; type: SlotType } | null>(null);
-  const [availableLayouts, setAvailableLayouts] = useState<LayoutTemplate[]>(() => {
-      try {
-          const saved = localStorage.getItem('periodica_layouts');
-          const list: LayoutTemplate[] = saved ? JSON.parse(saved) : STATIC_LAYOUTS;
-          return list.map(l => normalizeLayoutRects(l));
-      } catch (e) {
-          return STATIC_LAYOUTS.map(l => normalizeLayoutRects(l));
+  // --- Hooks ---
+  const projects = useProjects();
+  const images = useImages();
+
+  const editor = useEditor({
+    onSpreadsChange: useCallback((newSpreads, newTotalPages) => {
+      images.recalculateUsage(newSpreads);
+      if (projects.activeProjectId) {
+        projects.updateProject(projects.activeProjectId, {
+          spreads: newSpreads,
+          pageCount: newTotalPages,
+          updatedAt: new Date(),
+        });
       }
+    }, [images, projects]),
+  });
+
+  // --- Layouts (persisted) ---
+  const [availableLayouts, setAvailableLayouts] = useState<LayoutTemplate[]>(() => {
+    try {
+      const saved = localStorage.getItem('periodica_layouts');
+      const list: LayoutTemplate[] = saved ? JSON.parse(saved) : STATIC_LAYOUTS;
+      return list.map(l => normalizeLayoutRects(l));
+    } catch (e) {
+      return STATIC_LAYOUTS.map(l => normalizeLayoutRects(l));
+    }
   });
 
   useEffect(() => {
-      localStorage.setItem('periodica_layouts', JSON.stringify(availableLayouts));
+    localStorage.setItem('periodica_layouts', JSON.stringify(availableLayouts));
   }, [availableLayouts]);
-  
-  const [spreads, setSpreads] = useState<Spread[]>([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [history, setHistory] = useState<Spread[][]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const [currentSpreadIndex, setCurrentSpreadIndex] = useState(0);
-  const [activePageSide, setActivePageSide] = useState<'left' | 'right'>('right'); 
-  const [viewMode, setViewMode] = useState<'editor' | 'preview' | 'admin'>('editor');
-  const [isMobilePagesOpen, setIsMobilePagesOpen] = useState(false);
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
 
-  useEffect(() => {
-    if (projects.length === 0) {
-        const demoTheme = THEMES[2]; 
-        const demoProject: Project = {
-            id: 'demo-1',
-            name: 'Твое Портфолио',
-            themeId: demoTheme.id,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            previewUrl: demoTheme.previewImage,
-            spreads: [],
-            pageCount: 24,
-            price: '2000 ₽'
-        };
-        setProjects([demoProject]);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (currentTheme) {
-        const linkId = 'theme-fonts';
-        let link = document.getElementById(linkId) as HTMLLinkElement;
-        if (!link) {
-            link = document.createElement('link');
-            link.id = linkId;
-            link.rel = 'stylesheet';
-            document.head.appendChild(link);
-        }
-        let fontQuery = '';
-        if (currentTheme.id === 'lookbook') fontQuery = 'family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600';
-        if (currentTheme.id === 'valentine') fontQuery = 'family=Great+Vibes&family=Lato:wght@300;400;700';
-        if (currentTheme.id === 'astrology') fontQuery = 'family=Cinzel:wght@400;700&family=Montserrat:wght@300;400';
-        if (currentTheme.id === 'memories') fontQuery = 'family=Courier+Prime:wght@400;700&family=Merriweather:wght@300;400';
-        if (!fontQuery) fontQuery = 'family=Inter:wght@300;400;600';
-        link.href = `https://fonts.googleapis.com/css2?${fontQuery}&display=swap`;
-    }
-  }, [currentTheme]);
-
-  const addToHistory = useCallback((newSpreads: Spread[]) => {
-      setHistory(prev => {
-        const newHistory = prev.slice(0, historyIndex + 1);
-        newHistory.push(deepClone(newSpreads));
-        if (newHistory.length > 20) newHistory.shift();
-        return newHistory;
-      });
-      setHistoryIndex(prev => Math.min(prev + 1, 20)); 
-  }, [historyIndex]);
-
-  useEffect(() => {
-    setHistoryIndex(prev => Math.min(prev, history.length - 1));
-  }, [history.length]);
-
-  const undo = () => {
-      if (historyIndex > 0) {
-          setHistoryIndex(prev => prev - 1);
-          setSpreads(deepClone(history[historyIndex - 1]));
-      }
-  };
-
-  const redo = () => {
-      if (historyIndex < history.length - 1) {
-          setHistoryIndex(prev => prev + 1);
-          setSpreads(deepClone(history[historyIndex + 1]));
-      }
-  };
-
-  const updateSpreadsWithHistory = (newSpreads: Spread[]) => {
-      setSpreads(newSpreads);
-      setHistory(prev => {
-          const newHistory = prev.slice(0, historyIndex + 1);
-          newHistory.push(deepClone(newSpreads));
-          if (newHistory.length > 20) newHistory.shift();
-          return newHistory;
-      });
-      setHistoryIndex(prev => prev + 1);
-      calculateImageUsage(newSpreads);
-      setTotalPages((newSpreads.length - 2) * 2);
-      if (activeProjectId) {
-          setProjects(prev => prev.map(p => p.id === activeProjectId ? { ...p, spreads: newSpreads, pageCount: (newSpreads.length - 2) * 2, updatedAt: new Date() } : p));
-      }
-  };
-
-  const calculateImageUsage = (currentSpreads: Spread[]) => {
-      const usageMap: {[url: string]: number} = {};
-      currentSpreads.forEach(spread => {
-          Object.values(spread.leftPage.content).forEach(val => { if(val) usageMap[val] = (usageMap[val] || 0) + 1; });
-          Object.values(spread.rightPage.content).forEach(val => { if(val) usageMap[val] = (usageMap[val] || 0) + 1; });
-      });
-      setUploadedImages(prev => prev.map(img => ({ ...img, usedCount: usageMap[img.url] || 0 })));
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newImages: UploadedImage[] = Array.from(e.target.files).map(file => ({ id: generateId(), url: URL.createObjectURL(file as File), usedCount: 0 }));
-      setUploadedImages(prev => [...newImages, ...prev]);
-    }
-  };
-
-  const updatePageContent = (side: 'left' | 'right', slotId: string, content: string) => {
-    const newSpreads = deepClone(spreads); 
-    const spread = newSpreads[currentSpreadIndex];
-    const pageKey = side === 'left' ? 'leftPage' : 'rightPage';
-    if (spread[pageKey].type === 'flyleaf') return;
-    spread[pageKey].content[slotId] = content;
-    updateSpreadsWithHistory(newSpreads);
-  };
-
-  const updatePageSettings = (side: 'left' | 'right', slotId: string, settings: Partial<SlotSettings>) => {
-    const newSpreads = deepClone(spreads);
-    const spread = newSpreads[currentSpreadIndex]; 
-    const pageKey = side === 'left' ? 'leftPage' : 'rightPage';
-    if (spread[pageKey].type === 'flyleaf') return;
-    const currentSettings = spread[pageKey].slotSettings[slotId] || {};
-    spread[pageKey].slotSettings[slotId] = { ...currentSettings, ...settings };
-    updateSpreadsWithHistory(newSpreads);
-  };
-
-  const handleLayoutSelect = (layoutId: string) => {
-    const newSpreads = deepClone(spreads);
-    const spread = newSpreads[currentSpreadIndex];
-    const pageKey = activePageSide === 'left' ? 'leftPage' : 'rightPage';
-    if (currentSpreadIndex === 0 && activePageSide === 'left') return;
-    if (spread[pageKey].type === 'flyleaf') return;
-    spread[pageKey].layoutId = layoutId;
-    const layout = availableLayouts.find(l => l.id === layoutId);
-    const content: PageContent = {};
-    const slotSettings: { [slotId: string]: SlotSettings } = {};
-    if (layout?.slots) {
-      for (const slot of layout.slots) {
-        if (slot.defaultContent) content[slot.id] = slot.defaultContent;
-        if (slot.type === SlotType.IMAGE) {
-          slotSettings[slot.id] = {
-            fit: 'cover',
-            cropX: slot.defaultContentPosition?.x ?? 50,
-            cropY: slot.defaultContentPosition?.y ?? 50
-          };
-        }
-      }
-    }
-    spread[pageKey].content = content;
-    spread[pageKey].slotSettings = slotSettings;
-    setSelectedSlot(null);
-    updateSpreadsWithHistory(newSpreads);
-  };
-
-  const handleBackgroundSelect = (color: string) => {
-    const newSpreads = deepClone(spreads);
-    const spread = newSpreads[currentSpreadIndex];
-    const pageKey = activePageSide === 'left' ? 'leftPage' : 'rightPage';
-    if (spread[pageKey].type === 'flyleaf') return; 
-    spread[pageKey].backgroundColor = color;
-    updateSpreadsWithHistory(newSpreads);
-  }
-
-  const addPages = () => {
-      if (totalPages >= 32) return;
-      const newSpreads = [...spreads];
-      const insertIndex = newSpreads.length - 1;
-      newSpreads.splice(insertIndex, 0, createSpread('content', 'content'));
-      newSpreads.splice(insertIndex, 0, createSpread('content', 'content'));
-      updateSpreadsWithHistory(newSpreads);
-      setCurrentSpreadIndex(insertIndex); 
-      setSelectedSlot(null);
-  };
-
-  const handleClearAllPhotos = () => { if (window.confirm("Удалить фото?")) setUploadedImages([]); }
-  const handleClearAllPages = () => {
-    if (window.confirm("Очистить все?")) {
-        const newSpreads = deepClone(spreads);
-        newSpreads.forEach((s: Spread) => { 
-            if (s.leftPage.type !== 'flyleaf') { s.leftPage.content = {}; s.leftPage.slotSettings = {}; }
-            if (s.rightPage.type !== 'flyleaf') { s.rightPage.content = {}; s.rightPage.slotSettings = {}; }
-        });
-        updateSpreadsWithHistory(newSpreads);
-        setSelectedSlot(null);
-    }
-  }
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024);
+  const [isExporting, setIsExporting] = useState(false);
 
   const handleAdminSaveLayout = (newLayout: LayoutTemplate) => {
-      const normalized = normalizeLayoutRects(newLayout);
-      setAvailableLayouts(prev => {
-          const exists = prev.find(l => l.id === normalized.id);
-          return exists ? prev.map(l => l.id === normalized.id ? normalized : l) : [...prev, normalized];
-      });
+    const normalized = normalizeLayoutRects(newLayout);
+    setAvailableLayouts(prev => {
+      const exists = prev.find(l => l.id === normalized.id);
+      return exists ? prev.map(l => l.id === normalized.id ? normalized : l) : [...prev, normalized];
+    });
   };
 
-  const generateSpreads = () => {
-      const coverSpread = createSpread('cover', 'content'); 
-      const frontFlyleafSpread = createSpread('flyleaf', 'content');
-      const contentSpreads = Array.from({length: 8}, () => createSpread('content', 'content'));
-      const backFlyleafSpread = createSpread('content', 'flyleaf');
-      return [coverSpread, frontFlyleafSpread, ...contentSpreads, backFlyleafSpread];
+  const handleDeleteLayout = (layoutId: string) => {
+    setAvailableLayouts(prev => prev.filter(l => l.id !== layoutId));
+  };
+
+  // --- Orchestration (connecting hooks) ---
+  const handleStartNewProject = (theme: typeof projects.currentTheme & {}) => {
+    const { spreads } = projects.startNewProject(theme);
+    editor.initEditor(spreads);
+  };
+
+  const handleOpenProject = (project: Parameters<typeof projects.openProject>[0]) => {
+    const { spreads } = projects.openProject(project);
+    editor.initEditor(spreads);
+  };
+
+  // --- Routing ---
+  if (editor.viewMode === 'admin') {
+    return (
+      <AdminPanel
+        layouts={availableLayouts}
+        onSaveLayout={handleAdminSaveLayout}
+        onDeleteLayout={handleDeleteLayout}
+        onClose={() => editor.setViewMode('editor')}
+      />
+    );
   }
 
-  const startNewProject = (theme: ThemeConfig) => {
-      const newSpreads = generateSpreads();
-      const newProject = { id: generateId(), name: 'Новый проект', themeId: theme.id, createdAt: new Date(), updatedAt: new Date(), previewUrl: theme.previewImage, spreads: newSpreads, pageCount: 20, price: theme.price };
-      setProjects(prev => [...prev, newProject]);
-      openProject(newProject, theme);
-  };
+  if (projects.currentView === 'dashboard') {
+    return (
+      <Dashboard
+        projects={projects.projects}
+        onCreateProject={() => projects.setCurrentView('theme_selection')}
+        onEditProject={(p) => handleOpenProject(p)}
+      />
+    );
+  }
 
-  const openProject = (project: Project, theme?: ThemeConfig) => {
-      const pTheme = theme || THEMES.find(t => t.id === project.themeId) || THEMES[0];
-      setCurrentTheme(pTheme);
-      setActiveProjectId(project.id);
-      const initialSpreads = project.spreads.length > 0 ? project.spreads : generateSpreads();
-      setSpreads(initialSpreads);
-      setHistory([deepClone(initialSpreads)]);
-      setHistoryIndex(0);
-      setCurrentSpreadIndex(0);
-      setTotalPages((initialSpreads.length - 2) * 2);
-      setActivePageSide('right'); 
-      setSelectedSlot(null);
-      setCurrentView('editor');
-  };
+  if (projects.currentView === 'theme_selection') {
+    return (
+      <ThemeSelection
+        onSelectTheme={handleStartNewProject}
+        onBack={() => projects.setCurrentView('dashboard')}
+      />
+    );
+  }
 
-  if (viewMode === 'admin') return <AdminPanel layouts={availableLayouts} onSaveLayout={handleAdminSaveLayout} onClose={() => setViewMode('editor')} />;
-  if (currentView === 'dashboard') return <Dashboard projects={projects} onCreateProject={() => setCurrentView('theme_selection')} onEditProject={(p) => openProject(p)} />;
-  if (currentView === 'theme_selection') return <ThemeSelection onSelectTheme={startNewProject} onBack={() => setCurrentView('dashboard')} />;
-  if (!currentTheme) return null; 
+  if (!projects.currentTheme) return null;
 
-  const safeSpreadIndex = Math.min(currentSpreadIndex, spreads.length - 1);
-  const currentSpread = spreads[safeSpreadIndex];
-  const isPreview = viewMode === 'preview';
-  const isCover = currentSpreadIndex === 0;
+  // --- Editor View ---
+  const safeSpreadIndex = Math.min(editor.currentSpreadIndex, editor.spreads.length - 1);
+  const currentSpread = editor.spreads[safeSpreadIndex];
+  const isPreview = editor.viewMode === 'preview';
+  const isCover = editor.currentSpreadIndex === 0;
 
   let leftPageNumber = null, rightPageNumber = null;
-  if (currentSpreadIndex > 0) {
-      const startPage = (currentSpreadIndex - 1) * 2; 
-      if (currentSpread.leftPage.type !== 'flyleaf') leftPageNumber = startPage.toString();
-      if (currentSpread.rightPage.type !== 'flyleaf') rightPageNumber = (startPage + 1).toString();
+  if (editor.currentSpreadIndex > 0) {
+    const startPage = (editor.currentSpreadIndex - 1) * 2;
+    if (currentSpread.leftPage.type !== 'flyleaf') leftPageNumber = startPage.toString();
+    if (currentSpread.rightPage.type !== 'flyleaf') rightPageNumber = (startPage + 1).toString();
   }
 
   if (!currentSpread) return null;
@@ -295,95 +126,208 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-gray-50 text-gray-800 font-sans">
       {!isPreview && (
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          uploadedImages={uploadedImages}
-          onUpload={handleFileUpload}
-          onLayoutSelect={handleLayoutSelect}
-          onBackgroundSelect={handleBackgroundSelect}
-          isLeftPageSelected={activePageSide === 'left'}
-          theme={currentTheme}
-          layouts={availableLayouts}
-          onClearPhotos={handleClearAllPhotos}
-          selectedSlotId={selectedSlot?.id || null}
-          selectedSlotSide={selectedSlot?.side || null}
-          selectedSlotType={selectedSlot?.type || null}
-          onPlaceImage={(side, slotId, url) => updatePageContent(side, slotId, url)}
-          onUpdateSettings={updatePageSettings}
-          currentSpread={currentSpread}
-        />
+        <>
+          <Sidebar
+            activeTab={editor.activeTab}
+            setActiveTab={editor.setActiveTab}
+            uploadedImages={images.uploadedImages}
+            onUpload={images.handleFileUpload}
+            onLayoutSelect={(layoutId) => editor.handleLayoutSelect(layoutId, availableLayouts)}
+            onBackgroundSelect={editor.handleBackgroundSelect}
+            isLeftPageSelected={editor.activePageSide === 'left'}
+            theme={projects.currentTheme}
+            layouts={availableLayouts}
+            onClearPhotos={images.clearAll}
+            selectedSlotId={editor.selectedSlot?.id || null}
+            selectedSlotSide={editor.selectedSlot?.side || null}
+            selectedSlotType={editor.selectedSlot?.type || null}
+            onPlaceImage={(side, slotId, url) => editor.updatePageContent(side, slotId, url)}
+            onUpdateSettings={editor.updatePageSettings}
+            currentSpread={currentSpread}
+            isPanelOpen={isLeftPanelOpen}
+            onTogglePanel={setIsLeftPanelOpen}
+          />
+          {/* Left sidebar toggle — desktop only */}
+          <button
+            onClick={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
+            className="hidden lg:flex items-center justify-center w-5 h-14 bg-white border border-gray-200 rounded-r-md text-gray-400 hover:text-gray-900 hover:bg-gray-50 shadow-sm transition-colors self-center shrink-0 -ml-px z-10"
+          >
+            {isLeftPanelOpen ? <Icons.ChevronLeft size={13} /> : <Icons.ChevronRight size={13} />}
+          </button>
+        </>
       )}
 
+      {/* MAIN COLUMN */}
       <div className="flex-1 flex flex-col h-full relative min-w-0">
-        <div className="h-14 sm:h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 shadow-sm z-20 flex-shrink-0">
-          <div className="flex items-center gap-2 w-1/4">
-            <button onClick={() => setCurrentView('dashboard')} className="text-gray-400 hover:text-gray-900 flex items-center gap-1"><Icons.Back size={18} /><span className="hidden sm:inline text-[10px] uppercase font-bold">Проекты</span></button>
-          </div>
-          <div className="flex-1 text-center truncate px-2"><h1 className="text-gray-600 font-medium text-sm sm:text-base truncate">{projects.find(p => p.id === activeProjectId)?.name || 'Новый проект'}</h1></div>
-          <div className="flex items-center justify-end gap-1.5 w-1/4">
-            <button onClick={() => setViewMode('admin')} className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-gray-700 rounded-full shrink-0" title="Админ-панель"><Icons.Settings size={16} /></button>
-            <button onClick={() => setViewMode(isPreview ? 'editor' : 'preview')} className="text-gray-500 hover:text-gray-900 p-1.5 text-xs font-medium flex items-center gap-1">{isPreview ? <Icons.Edit size={18} /> : <Icons.Eye size={18} />}<span className="hidden md:inline">{isPreview ? 'Редактор' : 'Просмотр'}</span></button>
-            <button className="hidden sm:flex items-center justify-center min-w-[7rem] h-9 bg-[#FFEDEF] text-gray-900 px-4 py-2 rounded-sm text-xs font-medium">Сохранить</button>
-            <button className="flex items-center justify-center min-w-[7rem] h-9 bg-[#F9C2C6] text-gray-900 px-4 py-2 rounded-sm text-xs font-medium">{window.innerWidth < 640 ? <Icons.Cart size={16} /> : 'В корзину'}</button>
-          </div>
-        </div>
+        {/* ─── HEADER ─── */}
+        <header className="h-12 sm:h-14 bg-white border-b border-gray-200 flex items-center px-3 sm:px-5 gap-2 z-20 flex-shrink-0">
+          {/* Left: back */}
+          <button onClick={() => projects.setCurrentView('dashboard')} className="flex items-center gap-1.5 text-gray-400 hover:text-gray-900 transition-colors shrink-0 mr-1">
+            <Icons.Back size={18} />
+            <span className="hidden sm:inline text-[10px] uppercase font-bold tracking-wide">Проекты</span>
+          </button>
+          <div className="w-px h-6 bg-gray-200 hidden sm:block shrink-0" />
 
-        <div className="flex-1 relative bg-[#F9F9F9] overflow-hidden flex flex-col">
-          <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
-               <button onClick={undo} disabled={historyIndex <= 0} className="p-2 bg-white border border-gray-200 shadow-sm rounded-md disabled:opacity-50"><Icons.Undo size={16} /></button>
-               <button onClick={redo} disabled={historyIndex >= history.length - 1} className="p-2 bg-white border border-gray-200 shadow-sm rounded-md disabled:opacity-50"><Icons.Redo size={16} /></button>
+          {/* Center: title */}
+          <div className="flex-1 min-w-0 text-center px-2">
+            <h1 className="text-gray-600 font-medium text-sm truncate">
+              {projects.projects.find(p => p.id === projects.activeProjectId)?.name || 'Новый проект'}
+            </h1>
           </div>
-          {!isPreview && (
-              <button onClick={() => setIsMobilePagesOpen(true)} className="lg:hidden absolute top-4 right-4 z-20 p-2 bg-white border border-gray-200 shadow-sm rounded-md flex items-center gap-2"><Icons.Layout size={16} /><span className="text-[10px] font-bold uppercase">Страницы</span></button>
-          )}
 
-          <div className="flex-1 flex flex-col items-center justify-start lg:justify-center p-4 sm:p-10 overflow-auto custom-scrollbar" onClick={() => setSelectedSlot(null)}>
-            <div className={`flex flex-col items-center transition-transform duration-500 ${isPreview ? 'scale-[1.02] sm:scale-105' : 'scale-100'} w-full max-w-5xl mx-auto pb-40 lg:pb-0`}>
-              <div className="flex flex-col lg:flex-row shadow-2xl relative w-fit mx-auto">
+          {/* Right: actions */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <button onClick={() => editor.setViewMode('admin')} className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors shrink-0" title="Админ-панель">
+              <Icons.Settings size={15} />
+            </button>
+            <button
+              onClick={() => editor.setViewMode(isPreview ? 'editor' : 'preview')}
+              className="h-8 flex items-center justify-center gap-1.5 px-2.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors text-xs font-medium shrink-0"
+            >
+              {isPreview ? <Icons.Edit size={15} /> : <Icons.Eye size={15} />}
+              <span className="hidden md:inline">{isPreview ? 'Редактор' : 'Просмотр'}</span>
+            </button>
+            <button
+              onClick={() => setIsExporting(true)}
+              disabled={isExporting}
+              className="hidden sm:flex items-center justify-center h-8 bg-[#FFEDEF] hover:bg-[#ffe0e3] text-gray-800 px-4 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+            >
+              {isExporting ? 'Сохранение...' : 'Сохранить'}
+            </button>
+            <button className="flex items-center justify-center h-8 bg-[#F9C2C6] hover:bg-[#f5b0b5] text-gray-800 px-3 sm:px-4 rounded-lg text-xs font-medium transition-colors">
+              <span className="hidden sm:inline">В корзину</span>
+              <Icons.Cart size={15} className="sm:hidden" />
+            </button>
+          </div>
+        </header>
+
+        {/* ─── CANVAS WORKSPACE ─── */}
+        <div className="flex-1 relative bg-[#F3F4F6] overflow-hidden flex flex-col">
+          {/* Floating toolbar: undo/redo + mobile pages */}
+          <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
+            <div className="flex gap-1.5 pointer-events-auto">
+              <button onClick={editor.spreadsHistory.undo} disabled={!editor.spreadsHistory.canUndo} className="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 shadow-sm rounded-lg disabled:opacity-30 hover:bg-gray-50 transition-colors">
+                <Icons.Undo size={14} />
+              </button>
+              <button onClick={editor.spreadsHistory.redo} disabled={!editor.spreadsHistory.canRedo} className="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 shadow-sm rounded-lg disabled:opacity-30 hover:bg-gray-50 transition-colors">
+                <Icons.Redo size={14} />
+              </button>
+            </div>
+            {!isPreview && (
+              <button onClick={() => editor.setIsMobilePagesOpen(true)} className="lg:hidden flex items-center gap-1.5 h-8 px-3 bg-white border border-gray-200 shadow-sm rounded-lg text-[10px] font-bold uppercase text-gray-600 pointer-events-auto hover:bg-gray-50 transition-colors">
+                <Icons.Layout size={13} />
+                Стр.
+              </button>
+            )}
+          </div>
+
+          {/* Canvas + navigation: на узких экранах — прижатие к верху, чтобы страницу было видно сверху */}
+          <div className="flex-1 flex items-start lg:items-center justify-center overflow-auto custom-scrollbar min-h-0">
+            <div className="flex items-center gap-2 sm:gap-4 p-4 sm:p-6 lg:p-10 relative flex-shrink-0">
+              {/* Prev spread */}
+              <button
+                onClick={() => editor.setCurrentSpreadIndex(Math.max(0, editor.currentSpreadIndex - 1))}
+                disabled={editor.currentSpreadIndex === 0}
+                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center bg-white/80 hover:bg-white border border-gray-200 shadow-sm rounded-full disabled:opacity-20 transition-all shrink-0"
+              >
+                <Icons.ChevronLeft size={16} />
+              </button>
+
+              {/* Pages */}
+              <div className="flex flex-col items-center">
+                <div className={`flex flex-col lg:flex-row shadow-xl relative w-fit mx-auto rounded-sm overflow-hidden transition-transform duration-500 ${isPreview ? 'scale-[1.02]' : 'scale-100'}`}>
                   {!isCover && (
-                      <div className={`w-[85vw] sm:w-[60vw] lg:w-[35vh] xl:w-[40vh] bg-white relative border-b lg:border-b-0 lg:border-r border-gray-100 ${!isPreview && activePageSide === 'left' ? 'z-10 ring-2 ring-blue-400' : 'z-0'}`} style={{ aspectRatio: '1 / 1.414' }}>
-                        <PageRenderer pageData={currentSpread.leftPage} isSelected={!isPreview && activePageSide === 'left'} onSelect={() => { setActivePageSide('left'); setSelectedSlot(null); }} selectedSlotId={selectedSlot?.side === 'left' ? selectedSlot.id : null} onSelectSlot={(id, type) => { setSelectedSlot({ id, side: 'left', type }); setActivePageSide('left'); if (type === SlotType.TEXT) setActiveTab('text'); }} onUpdateContent={(slotId, content) => updatePageContent('left', slotId, content)} onUpdateSettings={(slotId, settings) => updatePageSettings('left', slotId, settings)} theme={currentTheme} customLayouts={availableLayouts} />
-                      </div>
+                    <div
+                      className={`w-[85vw] sm:w-[65vw] md:w-[50vw] lg:w-[40vh] xl:w-[48vh] 2xl:w-[56vh] bg-white relative border-b lg:border-b-0 lg:border-r border-gray-100 cursor-pointer ${!isPreview && editor.activePageSide === 'left' ? 'ring-2 ring-blue-400 z-10' : 'z-0'}`}
+                      style={{ aspectRatio: '1 / 1.414' }}
+                    >
+                      <PageRenderer pageData={currentSpread.leftPage} isSelected={!isPreview && editor.activePageSide === 'left'} onSelect={() => { editor.setActivePageSide('left'); editor.setSelectedSlot(null); }} selectedSlotId={editor.selectedSlot?.side === 'left' ? editor.selectedSlot.id : null} onSelectSlot={(id, type) => { editor.setSelectedSlot({ id, side: 'left', type }); editor.setActivePageSide('left'); if (type === SlotType.TEXT) editor.setActiveTab('text'); }} onUpdateContent={(slotId, content) => editor.updatePageContent('left', slotId, content)} onUpdateSettings={(slotId, settings) => editor.updatePageSettings('left', slotId, settings)} theme={projects.currentTheme} customLayouts={availableLayouts} getImageDimsByUrl={images.getImageDimsByUrl} readOnly={isPreview} />
+                    </div>
                   )}
-                  <div className={`w-[85vw] sm:w-[60vw] lg:w-[35vh] xl:w-[40vh] bg-white relative border-gray-100 ${!isPreview && activePageSide === 'right' ? 'z-10 ring-2 ring-blue-400' : 'z-0'}`} style={{ aspectRatio: '1 / 1.414' }}>
-                    <PageRenderer pageData={currentSpread.rightPage} isSelected={!isPreview && activePageSide === 'right'} onSelect={() => { setActivePageSide('right'); setSelectedSlot(null); }} selectedSlotId={selectedSlot?.side === 'right' ? selectedSlot.id : null} onSelectSlot={(id, type) => { setSelectedSlot({ id, side: 'right', type }); setActivePageSide('right'); if (type === SlotType.TEXT) setActiveTab('text'); }} onUpdateContent={(slotId, content) => updatePageContent('right', slotId, content)} onUpdateSettings={(slotId, settings) => updatePageSettings('right', slotId, settings)} theme={currentTheme} customLayouts={availableLayouts} />
+                  <div
+                    className={`w-[85vw] sm:w-[65vw] md:w-[50vw] lg:w-[40vh] xl:w-[48vh] 2xl:w-[56vh] bg-white relative cursor-pointer ${!isPreview && editor.activePageSide === 'right' ? 'ring-2 ring-blue-400 z-10' : 'z-0'}`}
+                    style={{ aspectRatio: '1 / 1.414' }}
+                  >
+                    <PageRenderer pageData={currentSpread.rightPage} isSelected={!isPreview && editor.activePageSide === 'right'} onSelect={() => { editor.setActivePageSide('right'); editor.setSelectedSlot(null); }} selectedSlotId={editor.selectedSlot?.side === 'right' ? editor.selectedSlot.id : null} onSelectSlot={(id, type) => { editor.setSelectedSlot({ id, side: 'right', type }); editor.setActivePageSide('right'); if (type === SlotType.TEXT) editor.setActiveTab('text'); }} onUpdateContent={(slotId, content) => editor.updatePageContent('right', slotId, content)} onUpdateSettings={(slotId, settings) => editor.updatePageSettings('right', slotId, settings)} theme={projects.currentTheme} customLayouts={availableLayouts} getImageDimsByUrl={images.getImageDimsByUrl} readOnly={isPreview} />
                   </div>
+                </div>
+
+                {/* Page numbers */}
+                <div className="flex items-center gap-4 mt-4 text-[11px] text-gray-400 font-medium">
+                  {isCover ? (
+                    <span>Обложка</span>
+                  ) : (
+                    <>
+                      {leftPageNumber && <span className="px-2 py-0.5 bg-white border border-gray-200 rounded">{leftPageNumber}</span>}
+                      {rightPageNumber && <span className="px-2 py-0.5 bg-white border border-gray-200 rounded">{rightPageNumber}</span>}
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="flex w-full mt-6 sm:mt-10 px-4">{isCover ? <span className="w-full text-center text-gray-300 font-medium text-xs">Обложка</span> : <><div className="flex-1 flex justify-center">{leftPageNumber && <span className="text-gray-400 font-medium text-xs border-b border-gray-200 pb-0.5 px-2">{leftPageNumber}</span>}</div><div className="flex-1 flex justify-center">{rightPageNumber && <span className="text-gray-400 font-medium text-xs border-b border-gray-200 pb-0.5 px-2">{rightPageNumber}</span>}</div></>}</div>
+
+              {/* Next spread */}
+              <button
+                onClick={() => editor.setCurrentSpreadIndex(Math.min(editor.spreads.length - 1, editor.currentSpreadIndex + 1))}
+                disabled={editor.currentSpreadIndex >= editor.spreads.length - 1}
+                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center bg-white/80 hover:bg-white border border-gray-200 shadow-sm rounded-full disabled:opacity-20 transition-all shrink-0"
+              >
+                <Icons.ChevronRight size={16} />
+              </button>
             </div>
           </div>
         </div>
       </div>
 
+      {/* ─── RIGHT SIDEBAR (Pages) ─── */}
       {!isPreview && (
-         <div className={`
-            fixed lg:static inset-0 z-50 lg:z-10 transition-all duration-300 flex
-            ${isMobilePagesOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
-            ${isRightPanelOpen ? 'lg:w-72' : 'lg:w-0'}
-         `}>
-             <div className="lg:hidden absolute inset-0" onClick={() => setIsMobilePagesOpen(false)} />
-             
-             {/* TOGGLE BUTTON DESKTOP (Always clickable) */}
-             <button 
-                onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
-                className="hidden lg:flex absolute lg:static left-0 lg:-ml-8 top-1/2 -translate-y-1/2 bg-white border border-r-0 border-gray-200 p-1.5 rounded-l-md text-gray-400 hover:text-gray-900 shadow-md z-[60] transition-colors self-center"
-                style={{ pointerEvents: 'auto' }}
-             >
-                {isRightPanelOpen ? <Icons.ChevronRight size={16} /> : <Icons.ChevronLeft size={16} />}
-             </button>
+        <>
+          {/* Desktop toggle — always visible, sits outside the panel */}
+          <button
+            onClick={() => editor.setIsRightPanelOpen(!editor.isRightPanelOpen)}
+            className="hidden lg:flex items-center justify-center w-5 h-14 bg-white border border-gray-200 rounded-l-md text-gray-400 hover:text-gray-900 hover:bg-gray-50 shadow-sm transition-colors self-center shrink-0 -mr-px z-10"
+          >
+            {editor.isRightPanelOpen ? <Icons.ChevronRight size={13} /> : <Icons.ChevronLeft size={13} />}
+          </button>
 
-             <div className={`
-                absolute lg:relative right-0 lg:right-auto top-0 bottom-0 w-72 sm:w-80 lg:w-full bg-white shadow-xl lg:shadow-none h-full border-l border-gray-200 transition-all duration-300
-                ${!isRightPanelOpen && 'lg:opacity-0 lg:pointer-events-none'}
-             `}>
-                <div className="lg:hidden flex items-center justify-between p-4 border-b">
-                    <span className="font-bold text-sm uppercase">Страницы</span>
-                    <button onClick={() => setIsMobilePagesOpen(false)} className="p-2 text-gray-400"><Icons.Close size={20} /></button>
-                </div>
-                <RightSidebar spreads={spreads} currentSpreadIndex={currentSpreadIndex} onSelectSpread={(idx) => { setCurrentSpreadIndex(idx); setIsMobilePagesOpen(false); }} onAddPages={addPages} onClearAll={handleClearAllPages} totalPages={totalPages} maxPages={32} layouts={availableLayouts} />
-             </div>
-         </div>
+          {/* Panel wrapper */}
+          <div className={`
+              transition-all duration-300 overflow-hidden shrink-0
+              ${editor.isRightPanelOpen ? 'lg:w-56 xl:w-64' : 'lg:w-0'}
+              fixed lg:static inset-0 z-50 lg:z-10
+              ${editor.isMobilePagesOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+           `}>
+            {/* Mobile backdrop */}
+            <div className={`lg:hidden absolute inset-0 bg-black/10 transition-opacity ${editor.isMobilePagesOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => editor.setIsMobilePagesOpen(false)} />
+
+            <div className={`
+                  absolute lg:relative right-0 lg:right-auto top-0 bottom-0 w-[280px] lg:w-full bg-white shadow-xl lg:shadow-none h-full transition-all duration-300
+               `}>
+              {/* Mobile header */}
+              <div className="lg:hidden flex items-center justify-between px-3 py-2.5 border-b border-gray-100">
+                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Страницы</span>
+                <button onClick={() => editor.setIsMobilePagesOpen(false)} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                  <Icons.Close size={16} />
+                </button>
+              </div>
+              <RightSidebar spreads={editor.spreads} currentSpreadIndex={editor.currentSpreadIndex} onSelectSpread={(idx) => { editor.setCurrentSpreadIndex(idx); editor.setIsMobilePagesOpen(false); }} onAddPages={editor.addPages} onClearAll={editor.handleClearAllPages} totalPages={editor.totalPages} maxPages={32} layouts={availableLayouts} />
+            </div>
+          </div>
+        </>
+      )}
+      {/* PDF Export Overlay */}
+      {isExporting && (
+        <PDFExporter
+          pages={editor.spreads.flatMap(s => [s.leftPage, s.rightPage])}
+          customLayouts={availableLayouts}
+          theme={projects.currentTheme}
+          getImageDimsByUrl={images.getImageDimsByUrl}
+          onComplete={() => setIsExporting(false)}
+          onError={(err: any) => {
+            console.error(err);
+            alert('Ошибка при сохранении PDF');
+            setIsExporting(false);
+          }}
+        />
       )}
     </div>
   );

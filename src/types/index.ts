@@ -2,7 +2,9 @@
 export interface UploadedImage {
   id: string;
   url: string;
-  usedCount: number; // How many times used in the project
+  usedCount: number;
+  naturalWidth?: number;
+  naturalHeight?: number;
 }
 
 export enum SlotType {
@@ -16,7 +18,7 @@ export interface SlotSettings {
   filter?: 'none' | 'grayscale' | 'sepia' | 'contrast';
   cropX?: number;
   cropY?: number;
-  
+
   // Text settings
   align?: 'left' | 'center' | 'right' | 'justify';
   fontFamily?: string;
@@ -27,19 +29,20 @@ export interface SlotSettings {
   letterSpacing?: number;
   color?: string;
   uppercase?: boolean;
+  verticalAlign?: 'top' | 'center' | 'bottom';
 }
 
 export interface LayoutSlot {
   id: string;
   type: SlotType;
-  className: string; 
+  className: string;
   placeholder?: string;
   // Admin Constructed Layouts (percentages 0-100)
   rect?: {
-      x: number;
-      y: number;
-      w: number;
-      h: number;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
   };
   rotation?: number;
   opacity?: number;      // New: 0 to 1
@@ -50,6 +53,8 @@ export interface LayoutSlot {
   defaultContent?: string;
   /** Позиция фото в слоте (object-position %). При применении макета копируется в slotSettings.cropX/cropY. */
   defaultContentPosition?: { x: number; y: number };
+  /** Настройки текста по умолчанию (шрифт, размер, жирность и т.д.). При применении макета копируются в slotSettings. */
+  defaultSettings?: SlotSettings;
 }
 
 export interface LayoutTemplate {
@@ -72,7 +77,7 @@ export type PageType = 'content' | 'cover' | 'flyleaf';
 export interface PageData {
   id: string;
   layoutId: string;
-  type: PageType; 
+  type: PageType;
   content: PageContent;
   slotSettings: { [slotId: string]: SlotSettings };
   backgroundColor?: string;
@@ -96,7 +101,7 @@ export interface ThemeColors {
   background: string;
   text: string;
   accent: string;
-  palette: string[]; 
+  palette: string[];
 }
 
 export interface ThemeFonts {
@@ -106,11 +111,11 @@ export interface ThemeFonts {
 
 export interface ThemeConfig {
   id: string;
-  name: string; 
-  description: string; 
-  price: string; 
+  name: string;
+  description: string;
+  price: string;
   badge?: 'Hit' | 'Limited' | 'New';
-  previewImage: string; 
+  previewImage: string;
   colors: ThemeColors;
   fonts: ThemeFonts;
   recommendedPages: number;
