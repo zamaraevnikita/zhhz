@@ -10,16 +10,19 @@ import { LayoutTemplate, SlotType } from './types';
 import { LAYOUTS as STATIC_LAYOUTS } from './constants';
 import { normalizeLayoutRects } from './utils';
 import PDFExporter from './components/PDFExporter';
+import { CartPanel } from './components/CartPanel';
 
 // Hooks
 import { useProjects } from './hooks/useProjects';
 import { useImages } from './hooks/useImages';
 import { useEditor } from './hooks/useEditor';
+import { useCart } from './hooks/useCart';
 
 const App: React.FC = () => {
   // --- Hooks ---
   const projects = useProjects();
   const images = useImages();
+  const { toggleCart, addToCart, cartItemCount } = useCart();
 
   const editor = useEditor({
     onSpreadsChange: useCallback((newSpreads, newTotalPages) => {
@@ -194,7 +197,18 @@ const App: React.FC = () => {
             >
               {isExporting ? 'Сохранение...' : 'Сохранить'}
             </button>
-            <button className="flex items-center justify-center h-8 bg-[#F9C2C6] hover:bg-[#f5b0b5] text-gray-800 px-3 sm:px-4 rounded-lg text-xs font-medium transition-colors">
+            <button onClick={toggleCart} className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors shrink-0 relative" title="Корзина">
+              <Icons.Cart size={15} />
+              {cartItemCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center shadow-sm">
+                  {cartItemCount}
+                </span>
+              )}
+            </button>
+            <button onClick={() => {
+              const currentProject = projects.projects.find(p => p.id === projects.activeProjectId);
+              if (currentProject) addToCart(currentProject);
+            }} className="flex items-center justify-center h-8 bg-[#F9C2C6] hover:bg-[#f5b0b5] text-gray-800 px-3 sm:px-4 rounded-lg text-xs font-medium transition-colors">
               <span className="hidden sm:inline">В корзину</span>
               <Icons.Cart size={15} className="sm:hidden" />
             </button>
@@ -318,8 +332,8 @@ const App: React.FC = () => {
       {isExporting && (
         <PDFExporter
           pages={editor.spreads.flatMap(s => [s.leftPage, s.rightPage])}
-          customLayouts={availableLayouts}
           theme={projects.currentTheme}
+          customLayouts={availableLayouts}
           getImageDimsByUrl={images.getImageDimsByUrl}
           onComplete={() => setIsExporting(false)}
           onError={(err: any) => {
@@ -329,6 +343,9 @@ const App: React.FC = () => {
           }}
         />
       )}
+
+      {/* CART OVERLAY */}
+      <CartPanel projects={projects.projects} />
     </div>
   );
 };

@@ -1,11 +1,11 @@
 import React from 'react';
-import { 
-  Image as ImageIcon, 
-  LayoutTemplate, 
-  ChevronLeft, 
-  ChevronRight, 
-  Upload, 
-  Type, 
+import {
+  Image as ImageIcon,
+  LayoutTemplate,
+  ChevronLeft,
+  ChevronRight,
+  Upload,
+  Type,
   Trash2,
   Eye,
   Edit3,
@@ -40,7 +40,8 @@ import {
   PanelLeftClose,
   PanelRightClose,
   PanelLeftOpen,
-  PanelRightOpen
+  PanelRightOpen,
+  Minus
 } from 'lucide-react';
 
 export const Icons = {
@@ -84,5 +85,6 @@ export const Icons = {
   PanelLeftClose,
   PanelRightClose,
   PanelLeftOpen,
-  PanelRightOpen
+  PanelRightOpen,
+  Minus
 };

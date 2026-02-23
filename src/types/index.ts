@@ -132,3 +132,9 @@ export interface Project {
   pageCount: number;
   price: string;
 }
+
+export interface CartItem {
+  projectId: string; // Links to Project.id
+  quantity: number;
+  pricePerUnit: number;
+}
