@@ -10,19 +10,21 @@ import { LayoutTemplate, SlotType } from './types';
 import { LAYOUTS as STATIC_LAYOUTS } from './constants';
 import { normalizeLayoutRects } from './utils';
 import PDFExporter from './components/PDFExporter';
-import { CartPanel } from './components/CartPanel';
+import { CartView } from './components/CartView'; // New import
 
 // Hooks
 import { useProjects } from './hooks/useProjects';
 import { useImages } from './hooks/useImages';
 import { useEditor } from './hooks/useEditor';
 import { useCart } from './hooks/useCart';
+import { useAuth } from './context/AuthContext';
 
 const App: React.FC = () => {
   // --- Hooks ---
   const projects = useProjects();
   const images = useImages();
   const { toggleCart, addToCart, cartItemCount } = useCart();
+  const { role } = useAuth();
 
   const editor = useEditor({
     onSpreadsChange: useCallback((newSpreads, newTotalPages) => {
@@ -80,6 +82,17 @@ const App: React.FC = () => {
 
   // --- Routing ---
   if (editor.viewMode === 'admin') {
+    if (role !== 'ADMIN') {
+      return (
+        <div className="flex h-screen w-screen items-center justify-center bg-gray-50 flex-col gap-4">
+          <Icons.Eye className="text-red-400" size={48} />
+          <h2 className="text-xl font-bold text-gray-800">Доступ запрещен</h2>
+          <p className="text-gray-500">У вас нет прав администратора для просмотра этой страницы.</p>
+          <button onClick={() => editor.setViewMode('editor')} className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg font-bold">Вернуться назад</button>
+        </div>
+      );
+    }
+
     return (
       <AdminPanel
         layouts={availableLayouts}
@@ -94,8 +107,21 @@ const App: React.FC = () => {
     return (
       <Dashboard
         projects={projects.projects}
+        activeProjectId={projects.activeProjectId}
         onCreateProject={() => projects.setCurrentView('theme_selection')}
-        onEditProject={(p) => handleOpenProject(p)}
+        onProjectSelect={(id) => {
+          const p = projects.projects.find(x => x.id === id);
+          if (p) {
+            handleOpenProject(p);
+          }
+        }}
+        onDeleteProject={(id) => {
+          if (window.confirm('Delete project?')) {
+            console.log('Project deletion logic not yet implemented for id', id);
+          }
+        }}
+        onViewCart={() => editor.setViewMode('cart')}
+        onAdminPanel={() => editor.setViewMode('admin')}
       />
     );
   }
@@ -107,6 +133,12 @@ const App: React.FC = () => {
         onBack={() => projects.setCurrentView('dashboard')}
       />
     );
+  }
+
+  if (editor.viewMode === 'cart') {
+    return <CartView projects={projects.projects} onBack={() => {
+      editor.setViewMode('editor');
+    }} />;
   }
 
   if (!projects.currentTheme) return null;
@@ -197,20 +229,13 @@ const App: React.FC = () => {
             >
               {isExporting ? 'Сохранение...' : 'Сохранить'}
             </button>
-            <button onClick={toggleCart} className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors shrink-0 relative" title="Корзина">
+            <button onClick={() => editor.setViewMode('cart')} className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors shrink-0 relative" title="Корзина">
               <Icons.Cart size={15} />
               {cartItemCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center shadow-sm">
                   {cartItemCount}
                 </span>
               )}
-            </button>
-            <button onClick={() => {
-              const currentProject = projects.projects.find(p => p.id === projects.activeProjectId);
-              if (currentProject) addToCart(currentProject);
-            }} className="flex items-center justify-center h-8 bg-[#F9C2C6] hover:bg-[#f5b0b5] text-gray-800 px-3 sm:px-4 rounded-lg text-xs font-medium transition-colors">
-              <span className="hidden sm:inline">В корзину</span>
-              <Icons.Cart size={15} className="sm:hidden" />
             </button>
           </div>
         </header>
@@ -290,63 +315,64 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div >
 
       {/* ─── RIGHT SIDEBAR (Pages) ─── */}
-      {!isPreview && (
-        <>
-          {/* Desktop toggle — always visible, sits outside the panel */}
-          <button
-            onClick={() => editor.setIsRightPanelOpen(!editor.isRightPanelOpen)}
-            className="hidden lg:flex items-center justify-center w-5 h-14 bg-white border border-gray-200 rounded-l-md text-gray-400 hover:text-gray-900 hover:bg-gray-50 shadow-sm transition-colors self-center shrink-0 -mr-px z-10"
-          >
-            {editor.isRightPanelOpen ? <Icons.ChevronRight size={13} /> : <Icons.ChevronLeft size={13} />}
-          </button>
+      {
+        !isPreview && (
+          <>
+            {/* Desktop toggle — always visible, sits outside the panel */}
+            <button
+              onClick={() => editor.setIsRightPanelOpen(!editor.isRightPanelOpen)}
+              className="hidden lg:flex items-center justify-center w-5 h-14 bg-white border border-gray-200 rounded-l-md text-gray-400 hover:text-gray-900 hover:bg-gray-50 shadow-sm transition-colors self-center shrink-0 -mr-px z-10"
+            >
+              {editor.isRightPanelOpen ? <Icons.ChevronRight size={13} /> : <Icons.ChevronLeft size={13} />}
+            </button>
 
-          {/* Panel wrapper */}
-          <div className={`
+            {/* Panel wrapper */}
+            <div className={`
               transition-all duration-300 overflow-hidden shrink-0
               ${editor.isRightPanelOpen ? 'lg:w-56 xl:w-64' : 'lg:w-0'}
               fixed lg:static inset-0 z-50 lg:z-10
               ${editor.isMobilePagesOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
            `}>
-            {/* Mobile backdrop */}
-            <div className={`lg:hidden absolute inset-0 bg-black/10 transition-opacity ${editor.isMobilePagesOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => editor.setIsMobilePagesOpen(false)} />
+              {/* Mobile backdrop */}
+              <div className={`lg:hidden absolute inset-0 bg-black/10 transition-opacity ${editor.isMobilePagesOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => editor.setIsMobilePagesOpen(false)} />
 
-            <div className={`
+              <div className={`
                   absolute lg:relative right-0 lg:right-auto top-0 bottom-0 w-[280px] lg:w-full bg-white shadow-xl lg:shadow-none h-full transition-all duration-300
                `}>
-              {/* Mobile header */}
-              <div className="lg:hidden flex items-center justify-between px-3 py-2.5 border-b border-gray-100">
-                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Страницы</span>
-                <button onClick={() => editor.setIsMobilePagesOpen(false)} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
-                  <Icons.Close size={16} />
-                </button>
+                {/* Mobile header */}
+                <div className="lg:hidden flex items-center justify-between px-3 py-2.5 border-b border-gray-100">
+                  <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Страницы</span>
+                  <button onClick={() => editor.setIsMobilePagesOpen(false)} className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                    <Icons.Close size={16} />
+                  </button>
+                </div>
+                <RightSidebar spreads={editor.spreads} currentSpreadIndex={editor.currentSpreadIndex} onSelectSpread={(idx) => { editor.setCurrentSpreadIndex(idx); editor.setIsMobilePagesOpen(false); }} onAddPages={editor.addPages} onClearAll={editor.handleClearAllPages} totalPages={editor.totalPages} maxPages={32} layouts={availableLayouts} />
               </div>
-              <RightSidebar spreads={editor.spreads} currentSpreadIndex={editor.currentSpreadIndex} onSelectSpread={(idx) => { editor.setCurrentSpreadIndex(idx); editor.setIsMobilePagesOpen(false); }} onAddPages={editor.addPages} onClearAll={editor.handleClearAllPages} totalPages={editor.totalPages} maxPages={32} layouts={availableLayouts} />
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )
+      }
       {/* PDF Export Overlay */}
-      {isExporting && (
-        <PDFExporter
-          pages={editor.spreads.flatMap(s => [s.leftPage, s.rightPage])}
-          theme={projects.currentTheme}
-          customLayouts={availableLayouts}
-          getImageDimsByUrl={images.getImageDimsByUrl}
-          onComplete={() => setIsExporting(false)}
-          onError={(err: any) => {
-            console.error(err);
-            alert('Ошибка при сохранении PDF');
-            setIsExporting(false);
-          }}
-        />
-      )}
-
-      {/* CART OVERLAY */}
-      <CartPanel projects={projects.projects} />
-    </div>
+      {
+        isExporting && (
+          <PDFExporter
+            pages={editor.spreads.flatMap(s => [s.leftPage, s.rightPage])}
+            theme={projects.currentTheme}
+            customLayouts={availableLayouts}
+            getImageDimsByUrl={images.getImageDimsByUrl}
+            onComplete={() => setIsExporting(false)}
+            onError={(err: any) => {
+              console.error(err);
+              alert('Ошибка при сохранении PDF');
+              setIsExporting(false);
+            }}
+          />
+        )
+      }
+    </div >
   );
 };
 

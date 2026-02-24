@@ -1,12 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Project } from '../types';
 import { Icons } from './IconComponents';
 import { useCart } from '../hooks/useCart';
+import { useAuth } from '../context/AuthContext';
+import { AuthModal } from './AuthModal';
 
 interface DashboardProps {
     projects: Project[];
-    onCreateProject: () => void;
-    onEditProject: (project: Project) => void;
+    activeProjectId: string | null;
+    onProjectSelect: (id: string) => void;
+    onNewProject: (themeId: string) => void;
+    onDeleteProject: (id: string) => void;
+    onViewCart: () => void;
+    onAdminPanel: () => void;
 }
 
 const Logo = () => (
@@ -15,8 +21,11 @@ const Logo = () => (
     </div>
 );
 
-export const Dashboard: React.FC<DashboardProps> = ({ projects, onCreateProject, onEditProject }) => {
-    const { toggleCart, addToCart, cartItemCount } = useCart();
+export const Dashboard: React.FC<DashboardProps> = ({ projects, activeProjectId, onProjectSelect, onNewProject, onDeleteProject, onViewCart, onAdminPanel }) => {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { items, addToCart, cartItemCount } = useCart();
+    const { role, currentUser, logout } = useAuth();
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
     return (
         <div className="min-h-screen bg-gray-50 relative overflow-x-hidden">
@@ -34,13 +43,41 @@ export const Dashboard: React.FC<DashboardProps> = ({ projects, onCreateProject,
                     </nav>
                 </div>
                 <div className="flex items-center gap-4">
-                    <button className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-700 transition-colors">
+                    {role === 'ADMIN' && (
+                        <button onClick={onAdminPanel} className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg text-xs font-bold transition-colors hover:bg-black">
+                            <Icons.Settings size={14} /> Админ
+                        </button>
+                    )}
+
+                    {role === 'GUEST' ? (
+                        <button
+                            onClick={() => setIsAuthModalOpen(true)}
+                            className="text-sm font-bold text-gray-900 border-2 border-gray-900 px-4 py-1.5 rounded-full hover:bg-gray-900 hover:text-white transition-colors"
+                        >
+                            Войти
+                        </button>
+                    ) : (
+                        <div className="flex items-center gap-3 border-r border-gray-200 pr-4">
+                            <span className="text-xs font-medium text-gray-600 hidden sm:block max-w-[120px] truncate">
+                                {currentUser?.name}
+                            </span>
+                            <button
+                                onClick={logout}
+                                className="text-xs text-gray-500 hover:text-red-500 font-medium transition-colors"
+                                title="Выйти"
+                            >
+                                Выйти
+                            </button>
+                        </div>
+                    )}
+
+                    <button className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-700 transition-colors ml-2 hidden sm:flex">
                         <Icons.Grid size={18} />
                     </button>
-                    <button onClick={toggleCart} className="w-10 h-10 relative rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-700 transition-colors">
-                        <Icons.Cart size={18} />
+                    <button onClick={onViewCart} className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors shrink-0 relative" title="Корзина">
+                        <Icons.Cart size={20} />
                         {cartItemCount > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm border border-white">
+                            <span className="absolute max-h-4 -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded-full flex items-center justify-center shadow-sm">
                                 {cartItemCount}
                             </span>
                         )}
@@ -62,7 +99,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ projects, onCreateProject,
                     </div>
 
                     <button
-                        onClick={onCreateProject}
+                        onClick={() => onNewProject('classic')}
                         className="w-full sm:w-auto bg-gray-900 text-white px-8 py-4 rounded-full shadow-lg hover:bg-black hover:scale-105 transition-all flex items-center justify-center gap-2 font-bold text-sm tracking-wide"
                     >
                         <Icons.Plus size={18} /> СОЗДАТЬ АЛЬБОМ
@@ -76,7 +113,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ projects, onCreateProject,
                         </div>
                         <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Архив пуст</h3>
                         <p className="text-gray-500 mb-8 max-w-md font-mono text-[10px] px-4">Создайте свой первый фотоальбом, выбрав один из наших дизайнерских макетов.</p>
-                        <button onClick={onCreateProject} className="text-gray-900 font-bold border-b-2 border-gray-900 hover:opacity-70 transition-opacity pb-1 text-sm tracking-wide">
+                        <button onClick={() => onNewProject('classic')} className="text-gray-900 font-bold border-b-2 border-gray-900 hover:opacity-70 transition-opacity pb-1 text-sm tracking-wide">
                             НАЧАТЬ ТВОРЧЕСТВО
                         </button>
                     </div>
@@ -125,7 +162,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ projects, onCreateProject,
                                     {/* Actions */}
                                     <div className="flex gap-3 mt-6">
                                         <button
-                                            onClick={() => onEditProject(project)}
+                                            onClick={() => onProjectSelect(project.id)}
                                             className="cta-button flex-1"
                                         >
                                             ИЗМЕНИТЬ
@@ -142,6 +179,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ projects, onCreateProject,
                 )}
 
             </main>
+
+            <AuthModal
+                isOpen={isAuthModalOpen}
+                onClose={() => setIsAuthModalOpen(false)}
+            />
         </div>
     );
 };

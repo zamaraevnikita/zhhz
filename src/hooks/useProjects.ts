@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { AppView, Project, ThemeConfig } from '../types';
 import { THEMES } from '../themes';
 import { generateId } from '../utils';
 import { generateSpreads } from '../services/spreadService';
+import { useAuth } from '../context/AuthContext';
 
 export interface UseProjectsReturn {
     currentView: AppView;
@@ -19,6 +20,7 @@ export interface UseProjectsReturn {
  * Хук для управления проектами, навигацией по экранам и темами.
  */
 export function useProjects(): UseProjectsReturn {
+    const { currentUser, role } = useAuth();
     const [currentView, setCurrentView] = useState<AppView>('dashboard');
     const [projects, setProjects] = useState<Project[]>([]);
     const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -70,6 +72,7 @@ export function useProjects(): UseProjectsReturn {
             id: generateId(),
             name: 'Новый проект',
             themeId: theme.id,
+            userId: currentUser?.id,
             createdAt: new Date(),
             updatedAt: new Date(),
             previewUrl: theme.previewImage,
@@ -82,7 +85,7 @@ export function useProjects(): UseProjectsReturn {
         setActiveProjectId(newProject.id);
         setCurrentView('editor');
         return { project: newProject, spreads: newSpreads };
-    }, []);
+    }, [currentUser]);
 
     const openProject = useCallback((project: Project, theme?: ThemeConfig) => {
         const pTheme = theme || THEMES.find(t => t.id === project.themeId) || THEMES[0];
@@ -97,10 +100,18 @@ export function useProjects(): UseProjectsReturn {
         setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...updates } : p));
     }, []);
 
+    const visibleProjects = useMemo(() => {
+        return projects.filter(p => {
+            if (role === 'ADMIN') return true;
+            if (role === 'GUEST') return !p.userId;
+            return p.userId === currentUser?.id;
+        });
+    }, [projects, role, currentUser]);
+
     return {
         currentView,
         setCurrentView,
-        projects,
+        projects: visibleProjects,
         activeProjectId,
         currentTheme,
         startNewProject,

@@ -1,3 +1,28 @@
+export type UserRole = 'GUEST' | 'USER' | 'ADMIN';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface OrderItem {
+  project: Project; // We store a snapshot of the project as it was ordered
+  quantity: number;
+  pricePerUnit: number;
+}
+
+export interface Order {
+  id: string;
+  userId: string | undefined; // Undefined if guest checking out, or we could force login
+  customerName: string;
+  customerEmail: string;
+  items: OrderItem[];
+  totalAmount: number;
+  createdAt: Date;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered';
+}
 
 export interface UploadedImage {
   id: string;
@@ -89,8 +114,8 @@ export interface Spread {
   rightPage: PageData;
 }
 
-export type AppView = 'dashboard' | 'theme_selection' | 'editor';
-export type ViewMode = 'editor' | 'preview' | 'admin';
+export type AppView = 'dashboard' | 'theme_selection' | 'editor' | 'cart';
+export type ViewMode = 'editor' | 'preview' | 'admin' | 'cart';
 export type SidebarTab = 'gallery' | 'templates' | 'backgrounds' | 'text';
 
 // --- Theme System ---
@@ -125,6 +150,7 @@ export interface Project {
   id: string;
   name: string;
   themeId: string;
+  userId?: string; // Optional for anonymous guest projects
   createdAt: Date;
   updatedAt: Date;
   previewUrl: string; // URL of the cover image
@@ -137,4 +163,5 @@ export interface CartItem {
   projectId: string; // Links to Project.id
   quantity: number;
   pricePerUnit: number;
+  addedAt: string; // ISO string representing exact time the cart snapshot was taken
 }

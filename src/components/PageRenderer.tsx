@@ -417,13 +417,6 @@ export const PageRenderer: React.FC<PageRendererProps> = ({
           );
         })()}
 
-        {/* Page Side Indicator - bottom so it doesn't go under navbar */}
-        {!readOnly && (
-          <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 text-xs font-medium transition-opacity duration-200 ${isSelected ? 'opacity-100 text-blue-600' : 'opacity-0'}`}>
-            <span className="bg-blue-50 px-3 py-1 rounded-full shadow-sm border border-blue-100">Выбрано</span>
-          </div>
-        )}
-
         {/* Photo Editor Modal */}
         {!readOnly && photoEditorSlot && (
           <PhotoEditorModal
@@ -437,6 +430,13 @@ export const PageRenderer: React.FC<PageRendererProps> = ({
           />
         )}
       </div>
+
+      {/* Page Side Indicator - bottom so it doesn't go under navbar */}
+      {!readOnly && (
+        <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs font-medium transition-opacity duration-200 ${isSelected ? 'opacity-100 text-blue-600' : 'opacity-0'}`}>
+          <span className="bg-blue-50/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-blue-100">Выбрано</span>
+        </div>
+      )}
     </div>
   );
 };

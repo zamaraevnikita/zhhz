@@ -29,8 +29,8 @@ export interface UseEditorReturn {
     setSelectedSlot: (slot: { id: string; side: 'left' | 'right'; type: SlotType } | null) => void;
 
     // View & UI
-    viewMode: 'editor' | 'preview' | 'admin';
-    setViewMode: (mode: 'editor' | 'preview' | 'admin') => void;
+    viewMode: 'editor' | 'preview' | 'admin' | 'cart';
+    setViewMode: (mode: 'editor' | 'preview' | 'admin' | 'cart') => void;
     activeTab: SidebarTab;
     setActiveTab: (tab: SidebarTab) => void;
     isMobilePagesOpen: boolean;
@@ -72,7 +72,7 @@ export function useEditor(params: {
     const [selectedSlot, setSelectedSlot] = useState<{ id: string; side: 'left' | 'right'; type: SlotType } | null>(null);
 
     // View
-    const [viewMode, setViewMode] = useState<'editor' | 'preview' | 'admin'>('editor');
+    const [viewMode, setViewMode] = useState<'editor' | 'preview' | 'admin' | 'cart'>('editor');
     const [activeTab, setActiveTab] = useState<SidebarTab>('gallery');
     const [isMobilePagesOpen, setIsMobilePagesOpen] = useState(false);
     const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
