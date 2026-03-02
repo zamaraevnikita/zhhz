@@ -57,6 +57,18 @@ app.use('/api/auth', authLimiter);
 // Auth routes don't need this, but it's acceptable for now.
 app.use(express.json({ limit: '50mb' }));
 
+// --- Global Error Dumper ---
+app.use((req, res, next) => {
+    const originalSend = res.json;
+    res.json = function (body) {
+        if (res.statusCode >= 400) {
+            console.error(`[HTTP ${res.statusCode}] ${req.method} ${req.url} ->`, JSON.stringify(body));
+        }
+        return originalSend.call(this, body);
+    };
+    next();
+});
+
 // --- Routes ---
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectsRoutes);

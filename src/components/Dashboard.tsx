@@ -162,14 +162,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ projects, activeProjectId,
                                     {/* Actions */}
                                     <div className="flex gap-3 mt-6">
                                         <button
-                                            onClick={() => onProjectSelect(project.id)}
+                                            onClick={(e) => { e.stopPropagation(); onProjectSelect(project.id); }}
                                             className="cta-button flex-1"
                                         >
                                             ИЗМЕНИТЬ
                                             <Icons.Edit size={14} />
                                         </button>
-                                        <button onClick={() => addToCart(project)} className="cta-button-secondary hover:bg-gray-100 transition-colors" title="В корзину">
+                                        <button onClick={(e) => { e.stopPropagation(); addToCart(project); }} className="cta-button-secondary hover:bg-gray-100 transition-colors" title="В корзину">
                                             <Icons.Cart size={20} />
+                                        </button>
+                                        <button onClick={(e) => { e.stopPropagation(); onDeleteProject(project.id); }} className="cta-button-secondary hover:bg-gray-100 text-red-500 hover:text-red-600 transition-colors" title="Удалить проект">
+                                            <Icons.Trash size={20} />
                                         </button>
                                     </div>
                                 </div>

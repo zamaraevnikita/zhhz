@@ -3,29 +3,19 @@ import { get, all, run, runTransaction } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 
-const projectSpreadSlotSchema = z.object({
+const pageContentSchema = z.object({
     id: z.string().max(50),
-    type: z.enum(['image', 'text']),
-    rect: z.object({
-        x: z.number().min(0).max(100),
-        y: z.number().min(0).max(100),
-        w: z.number().min(0).max(100),
-        h: z.number().min(0).max(100)
-    }).optional(),
-    content: z.string().max(5000).optional(),
-    src: z.string().optional(), // Can be very long as it's base64 for now, relying on global 50mb limit
-    className: z.string().max(255).optional().default(''),
-    rotation: z.number().optional(),
-    opacity: z.number().min(0).max(1).optional(),
-    borderRadius: z.number().optional(),
-    isBackground: z.boolean().optional(),
-    zIndex: z.number().optional()
+    type: z.enum(['cover', 'content', 'flyleaf']),
+    layoutId: z.string().nullable().optional(),
+    content: z.record(z.string(), z.any()).optional().default({}),
+    slotSettings: z.record(z.string(), z.any()).optional().default({}),
+    backgroundColor: z.string().optional().default('#ffffff')
 }).passthrough();
 
 const projectSpreadSchema = z.object({
     id: z.string().max(50),
-    type: z.enum(['cover', 'regular', 'flyleaf']).optional(),
-    slots: z.array(projectSpreadSlotSchema).max(50, "Max 50 slots per spread")
+    leftPage: pageContentSchema,
+    rightPage: pageContentSchema
 }).passthrough();
 
 const createProjectSchema = z.object({
@@ -33,7 +23,7 @@ const createProjectSchema = z.object({
     themeId: z.string().min(1, "Theme ID is required").max(50),
     isCustom: z.boolean().optional().default(false),
     spreads: z.array(projectSpreadSchema).max(150, "Max 150 spreads to prevent JSON bombs").optional().default([]),
-    price: z.number().int().positive().optional().nullable(),
+    price: z.string().max(50).optional().nullable(),
     previewUrl: z.string().url().max(1000).optional().nullable()
 });
 
@@ -98,6 +88,7 @@ export const createProject = async (req: Request, res: Response) => {
 
         const parseResult = createProjectSchema.safeParse(req.body);
         if (!parseResult.success) {
+            console.error('Validation failure on Create Project:', JSON.stringify(parseResult.error.issues, null, 2));
             return res.status(400).json({ error: 'Invalid project data', details: parseResult.error.issues });
         }
 

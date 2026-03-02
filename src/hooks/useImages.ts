@@ -20,7 +20,15 @@ export function useImages(): UseImagesReturn {
 
     const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            const files = Array.from(e.target.files);
+            const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+            const files = Array.from(e.target.files).filter((file: File) => {
+                if (file.size > MAX_FILE_SIZE) {
+                    alert(`Файл ${file.name} слишком большой. Максимальный размер 10 МБ.`);
+                    return false;
+                }
+                return true;
+            });
+
             files.forEach(file => {
                 const url = URL.createObjectURL(file as File);
                 const img = new Image();

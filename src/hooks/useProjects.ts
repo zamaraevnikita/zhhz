@@ -6,8 +6,6 @@ import { fetchApi } from '../utils/api';
 import { generateSpreads } from '../services/spreadService';
 
 export interface UseProjectsReturn {
-    currentView: AppView;
-    setCurrentView: (view: AppView) => void;
     projects: Project[];
     activeProjectId: string | null;
     currentTheme: ThemeConfig | null;
@@ -19,7 +17,6 @@ export interface UseProjectsReturn {
 
 export function useProjects(): UseProjectsReturn {
     const { currentUser, role } = useAuth();
-    const [currentView, setCurrentView] = useState<AppView>('dashboard');
     const [projects, setProjects] = useState<Project[]>([]);
     const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
     const [currentTheme, setCurrentTheme] = useState<ThemeConfig | null>(null);
@@ -93,7 +90,6 @@ export function useProjects(): UseProjectsReturn {
             setProjects(prev => [savedProject, ...prev]);
             setCurrentTheme(theme);
             setActiveProjectId(savedProject.id);
-            setCurrentView('editor');
 
             return { project: savedProject, spreads: newSpreads };
         } catch (e) {
@@ -106,7 +102,6 @@ export function useProjects(): UseProjectsReturn {
         const pTheme = theme || THEMES.find(t => t.id === project.themeId) || THEMES[0];
         setCurrentTheme(pTheme);
         setActiveProjectId(project.id);
-        setCurrentView('editor');
         const initialSpreads = project.spreads?.length > 0 ? project.spreads : generateSpreads();
         return { theme: pTheme, spreads: initialSpreads };
     }, []);
@@ -145,8 +140,6 @@ export function useProjects(): UseProjectsReturn {
     }, [projects, role]);
 
     return {
-        currentView,
-        setCurrentView,
         projects: visibleProjects,
         activeProjectId,
         currentTheme,

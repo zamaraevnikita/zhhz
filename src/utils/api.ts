@@ -38,6 +38,9 @@ export const fetchApi = async <T>(
     const data = await response.json();
 
     if (!response.ok) {
+        if (data.details) {
+            throw new Error(`${data.error}: ${JSON.stringify(data.details)}`);
+        }
         throw new Error(data.error || 'API Error');
     }
 
