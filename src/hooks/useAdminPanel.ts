@@ -62,6 +62,7 @@ export interface UseAdminPanelReturn {
     // Refs for input elements
     backgroundFileInputRef: React.RefObject<HTMLInputElement | null>;
     slotImageInputRef: React.RefObject<HTMLInputElement | null>;
+    snapLinesContainerRef: React.RefObject<HTMLDivElement | null>;
 
     // Canvas dimensions
     CANVAS_W: number;
@@ -98,6 +99,7 @@ export function useAdminPanel(layouts: LayoutTemplate[]): UseAdminPanelReturn {
     const containerRef = useRef<HTMLDivElement>(null);
     const backgroundFileInputRef = useRef<HTMLInputElement>(null);
     const slotImageInputRef = useRef<HTMLInputElement>(null);
+    const snapLinesContainerRef = useRef<HTMLDivElement>(null);
 
     const dragRef = useRef<{
         id: string;
@@ -106,6 +108,8 @@ export function useAdminPanel(layouts: LayoutTemplate[]): UseAdminPanelReturn {
         startRect: { x: number; y: number; w: number; h: number };
         startRotation: number;
         type: 'move' | 'resize' | 'resize-tl' | 'resize-tr' | 'resize-bl' | 'rotate';
+        currentRect?: { x: number; y: number; w: number; h: number };
+        currentRotation?: number;
     } | null>(null);
 
     const positionDragRef = useRef<{
@@ -116,6 +120,8 @@ export function useAdminPanel(layouts: LayoutTemplate[]): UseAdminPanelReturn {
         startPosY: number;
         width: number;
         height: number;
+        currentPosX?: number;
+        currentPosY?: number;
     } | null>(null);
 
     const layoutRef = useRef(editingLayout);
@@ -461,6 +467,9 @@ export function useAdminPanel(layouts: LayoutTemplate[]): UseAdminPanelReturn {
         const lines = snapEnabled ? getSnapLines(prev.slots, id) : { vertical: [], horizontal: [] };
         const activeGuides = { vertical: [] as number[], horizontal: [] as number[] };
 
+        let finalRect: { x: number; y: number; w: number; h: number } | null = null;
+        let finalRotation: number | null = null;
+
         const slots = prev.slots.map(s => {
             if (s.id !== id || !s.rect) return s;
             let newRect = { ...s.rect };
@@ -554,20 +563,55 @@ export function useAdminPanel(layouts: LayoutTemplate[]): UseAdminPanelReturn {
                 newRotation = (Math.atan2(clientY - centerY, clientX - centerX) * 180 / Math.PI) + 90;
             }
             newRect = normalizeSlotRect(newRect);
-            return { ...s, rect: newRect, rotation: newRotation };
+            finalRect = newRect;
+            finalRotation = newRotation;
+            return s; // KEEP UNCHANGED TO PREVENT REACT RENDERS
         });
 
-        layoutHistory.replace({ ...prev, slots });
-        setGuideLines(activeGuides);
-    }, [snapEnabled, getSnapLines, snapToLines, layoutHistory]);
+        if (finalRect) {
+            dragRef.current.currentRect = finalRect;
+            dragRef.current.currentRotation = finalRotation || 0;
+            const el = containerRef.current.querySelector(`[data-slot-id="${id}"]`) as HTMLElement;
+            if (el) {
+                el.style.left = `${finalRect.x}%`;
+                el.style.top = `${finalRect.y}%`;
+                el.style.width = `${finalRect.w}%`;
+                el.style.height = `${finalRect.h}%`;
+                el.style.transform = `rotate(${finalRotation || 0}deg)`;
+            }
+        }
+
+        if (snapLinesContainerRef.current) {
+            let html = '';
+            activeGuides.vertical.forEach(v => {
+                html += `<div class="absolute top-0 bottom-0 w-0.5 bg-blue-500 opacity-80" style="left: ${v}%; margin-left: -1px;"></div>`;
+            });
+            activeGuides.horizontal.forEach(h => {
+                html += `<div class="absolute left-0 right-0 h-0.5 bg-blue-500 opacity-80" style="top: ${h}%; margin-top: -1px;"></div>`;
+            });
+            snapLinesContainerRef.current.innerHTML = html;
+        }
+
+        // We purposefully DO NOT call layoutHistory.replace or setGuideLines here!
+    }, [snapEnabled, getSnapLines, snapToLines]);
 
     const handleMouseUp = useCallback(() => {
         if (dragRef.current) {
-            layoutHistory.commit();
+            if (dragRef.current.currentRect) {
+                const { id, currentRect, currentRotation } = dragRef.current;
+                const newSlots = layoutRef.current.slots.map(s =>
+                    s.id === id ? { ...s, rect: currentRect, rotation: currentRotation } : s
+                );
+                layoutHistory.set({ ...layoutRef.current, slots: newSlots });
+            } else {
+                layoutHistory.commit();
+            }
             dragRef.current = null;
+            if (snapLinesContainerRef.current) {
+                snapLinesContainerRef.current.innerHTML = '';
+            }
             setGuideLines({ vertical: [], horizontal: [] });
         }
-        positionDragRef.current = null;
     }, [layoutHistory]);
 
     const handleImagePositionMouseDown = useCallback((e: React.MouseEvent, slot: LayoutSlot) => {
@@ -588,7 +632,7 @@ export function useAdminPanel(layouts: LayoutTemplate[]): UseAdminPanelReturn {
     }, []);
 
     const handleImagePositionMouseMove = useCallback((e: MouseEvent) => {
-        if (!positionDragRef.current) return;
+        if (!positionDragRef.current || !containerRef.current) return;
         const { slotId, startX, startY, startPosX, startPosY, width, height } = positionDragRef.current;
         const deltaX = e.clientX - startX;
         const deltaY = e.clientY - startY;
@@ -596,13 +640,16 @@ export function useAdminPanel(layouts: LayoutTemplate[]): UseAdminPanelReturn {
         const deltaPctY = (deltaY / height) * 100 * -1;
         const newX = Math.min(100, Math.max(0, startPosX + deltaPctX));
         const newY = Math.min(100, Math.max(0, startPosY + deltaPctY));
-        layoutHistory.replace({
-            ...layoutRef.current,
-            slots: layoutRef.current.slots.map(s =>
-                s.id === slotId ? { ...s, defaultContentPosition: { x: newX, y: newY } } : s
-            ),
-        });
-    }, [layoutHistory]);
+
+        positionDragRef.current.currentPosX = newX;
+        positionDragRef.current.currentPosY = newY;
+
+        const el = containerRef.current.querySelector(`[data-slot-id="${slotId}"]`) as HTMLElement;
+        if (el) {
+            const img = el.querySelector('img');
+            if (img) img.style.objectPosition = `${newX}% ${newY}%`;
+        }
+    }, []);
 
     // --- Global Mouse Events ---
 
@@ -614,7 +661,15 @@ export function useAdminPanel(layouts: LayoutTemplate[]): UseAdminPanelReturn {
         const onUp = () => {
             handleMouseUp();
             if (positionDragRef.current) {
-                layoutHistory.commit();
+                if (positionDragRef.current.currentPosX !== undefined) {
+                    const { slotId, currentPosX, currentPosY } = positionDragRef.current;
+                    const newSlots = layoutRef.current.slots.map(s =>
+                        s.id === slotId ? { ...s, defaultContentPosition: { x: currentPosX, y: currentPosY } } : s
+                    );
+                    layoutHistory.set({ ...layoutRef.current, slots: newSlots });
+                } else {
+                    layoutHistory.commit();
+                }
                 positionDragRef.current = null;
             }
         };
@@ -666,6 +721,7 @@ export function useAdminPanel(layouts: LayoutTemplate[]): UseAdminPanelReturn {
         convertToCustomLayout,
         backgroundFileInputRef,
         slotImageInputRef,
+        snapLinesContainerRef,
         CANVAS_W,
         CANVAS_H,
     };

@@ -27,41 +27,49 @@ export const CartView: React.FC<CartViewProps> = ({ projects, onBack }) => {
 
     const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'processing' | 'success'>('idle');
 
-    const handleCheckout = () => {
+    const handleCheckout = async () => {
         if (role === 'GUEST') {
             setIsAuthModalOpen(true);
             return;
         }
 
         setCheckoutStatus('processing');
-        setTimeout(() => {
-            setCheckoutStatus('success');
 
-            // Generate snapshot of the actual ordered items before clearing the cart
+        try {
+            // Build order items from cart state (always works, even if project is not in live state).
+            // Enrich with project name/themeId if the project is available in the current session.
             const orderItems = items.map(cartItem => {
-                const projSnapshot = projects.find(p => p.id === cartItem.projectId);
+                const proj = projects.find(p => p.id === cartItem.projectId);
                 return {
-                    project: JSON.parse(JSON.stringify(projSnapshot)), // Deep clone to freeze state
+                    projectId: cartItem.projectId,
+                    name: proj?.name ?? 'Фотокнига',
+                    themeId: proj?.themeId ?? '',
                     quantity: cartItem.quantity,
-                    pricePerUnit: cartItem.pricePerUnit
+                    pricePerUnit: cartItem.pricePerUnit,
                 };
-            }).filter(item => item.project); // guard against missing projects
+            });
 
-            setTimeout(() => {
-                createOrder({
-                    userId: currentUser?.id,
-                    customerName: currentUser?.name || 'Гость',
-                    customerEmail: currentUser?.email || 'test@example.com',
-                    items: orderItems,
-                    totalAmount: cartTotal
-                });
+            if (orderItems.length === 0) {
+                throw new Error('Корзина пуста');
+            }
 
-                clearCart();
-                setCheckoutStatus('idle');
-                onBack(); // Go back to dashboard after successful order
-                alert('Заказ успешно оформлен! Спасибо за покупку.');
-            }, 1000);
-        }, 1500);
+            await createOrder({
+                customerName: currentUser?.name || 'Гость',
+                customerPhone: currentUser?.phone || '+7 (000) 000-00-00',
+                customerEmail: currentUser?.email,
+                items: orderItems,
+                totalAmount: cartTotal
+            });
+
+            setCheckoutStatus('success');
+            clearCart();
+            onBack(); // Go back to dashboard after successful order
+            alert('Заказ успешно оформлен! Спасибо за покупку.');
+        } catch (error: any) {
+            console.error("Checkout failed:", error?.message || error);
+            setCheckoutStatus('idle');
+            alert(`Ошибка при оформлении заказа: ${error?.message || 'Попробуйте снова.'}`);
+        }
     };
 
     const formatPrice = (price: number) => {
@@ -162,7 +170,7 @@ export const CartView: React.FC<CartViewProps> = ({ projects, onBack }) => {
                                                             <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
                                                                 <span className="bg-gray-100 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase">Твердый переплет</span>
                                                                 <span>•</span>
-                                                                <span>24 страницы</span>
+                                                                <span>{project.pageCount} страниц</span>
                                                             </div>
                                                         </div>
                                                         <button

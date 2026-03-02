@@ -25,7 +25,12 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [items, setItems] = useState<CartItem[]>(() => {
         try {
             const stored = localStorage.getItem(CART_STORAGE_KEY);
-            return stored ? JSON.parse(stored) : [];
+            if (!stored) return [];
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+                return parsed.filter(item => item && typeof item.projectId === 'string');
+            }
+            return [];
         } catch (e) {
             console.error('Failed to parse cart state:', e);
             return [];

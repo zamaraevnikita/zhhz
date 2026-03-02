@@ -20,3 +20,10 @@ node_modules
 *.njsproj
 *.sln
 *.sw?
+dev.db
+dev.sqlite
+backend/dev.db
+backend/dev.sqlite
+node_modules
+dist
+.env

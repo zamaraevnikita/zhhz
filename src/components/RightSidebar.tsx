@@ -1,16 +1,19 @@
 import React from 'react';
-import { Spread, PageData, LayoutTemplate, SlotType } from '../types';
+import { Spread, PageData, LayoutTemplate, SlotType, ThemeConfig } from '../types';
 import { Icons } from './IconComponents';
+import { SlotRenderer } from './SlotRenderer';
 
 interface RightSidebarProps {
     spreads: Spread[];
     currentSpreadIndex: number;
-    onSelectSpread: (index: number) => void;
+    activePageSide: 'left' | 'right';
+    onSelectSpread: (index: number, side?: 'left' | 'right') => void;
     onAddPages: () => void;
     onClearAll: () => void;
     totalPages: number;
     maxPages: number;
     layouts: LayoutTemplate[];
+    theme: ThemeConfig;
     onClose?: () => void;
 }
 
@@ -30,7 +33,7 @@ const scaleTailwindClasses = (classes: string = '') => {
 };
 
 // Helper component for thumbnail page
-const MiniPage: React.FC<{ page: PageData; layout?: LayoutTemplate }> = ({ page, layout }) => {
+const MiniPage: React.FC<{ page: PageData; layout?: LayoutTemplate; theme: ThemeConfig }> = ({ page, layout, theme }) => {
     if (page.type === 'flyleaf') {
         return (
             <div className="w-full h-full bg-white relative overflow-hidden flex items-center justify-center">
@@ -42,21 +45,10 @@ const MiniPage: React.FC<{ page: PageData; layout?: LayoutTemplate }> = ({ page,
     // Default white if no layout found
     if (!layout) return <div className="w-full h-full bg-white"></div>;
 
-    const getFilterCSS = (filterMode: string) => {
-        if (filterMode === 'grayscale') return 'grayscale(100%)';
-        if (filterMode === 'sepia') return 'sepia(100%)';
-        if (filterMode === 'contrast') return 'contrast(150%)';
-        return 'none';
-    };
-
     const renderSlot = (s: typeof layout.slots[0], idx: number) => {
         const content = page.content[s.id];
         const settings = page.slotSettings?.[s.id] || {};
         const isText = s.type === SlotType.TEXT;
-        const fitMode = settings.fit || 'cover';
-        const filterMode = settings.filter || 'none';
-        const cropX = settings.cropX ?? 50;
-        const cropY = settings.cropY ?? 50;
 
         // Scale slot specific classes
         const scaledSlotClass = scaleTailwindClasses(s.className);
@@ -72,7 +64,8 @@ const MiniPage: React.FC<{ page: PageData; layout?: LayoutTemplate }> = ({ page,
             transformOrigin: 'center center',
             opacity: s.opacity ?? 1,
             zIndex: s.zIndex || 0,
-            borderRadius: s.borderRadius ? `${s.borderRadius}px` : undefined, 
+            // we let SlotRenderer manage the inner radius but we border-radius the outer bounds too for rect slots
+            borderRadius: s.borderRadius ? `${s.borderRadius}px` : undefined,
         } : {};
 
         return (
@@ -84,38 +77,18 @@ const MiniPage: React.FC<{ page: PageData; layout?: LayoutTemplate }> = ({ page,
                     backgroundColor: content ? 'transparent' : (isText ? 'transparent' : 'rgba(0,0,0,0.05)')
                 }}
             >
-                {content && !isText && (
-                    <img
-                        src={content}
-                        className={`absolute inset-0 w-full h-full ${fitMode === 'contain' ? 'object-contain' : 'object-cover'}`}
-                        style={{
-                            objectPosition: `${cropX}% ${cropY}%`,
-                            filter: getFilterCSS(filterMode),
-                            borderRadius: s.borderRadius ? `${s.borderRadius}px` : undefined,
-                        }}
-                        alt=""
-                    />
-                )}
-                {content && isText && (
-                    <div
-                        className="absolute inset-0 w-full h-full break-words overflow-hidden p-[1px]"
-                        style={{
-                            color: settings.color || '#1f2937',
-                            fontFamily: settings.fontFamily || 'inherit',
-                            fontWeight: (settings.fontWeight as any) || 'normal',
-                            fontStyle: settings.fontStyle || 'normal',
-                            textAlign: (settings.align as any) || 'left',
-                            textTransform: settings.uppercase ? 'uppercase' : 'none',
-                            // Typography scaling
-                            fontSize: settings.fontSize ? `${settings.fontSize / 5.2}cqw` : '3.5cqw',
-                            lineHeight: settings.lineHeight || 1.4,
-                            letterSpacing: settings.letterSpacing ? `${settings.letterSpacing}em` : 'normal',
-                            whiteSpace: 'pre-wrap',
-                        }}
-                    >
-                        {content}
-                    </div>
-                )}
+                {/* 
+                  Use SlotRenderer here for the visual implementation 
+                  scaleFactor={0.15} is an approx ratio for a ~180px thumbnail from a 1200px master (180/1200 = 0.15) 
+                */}
+                <SlotRenderer
+                    slot={s}
+                    content={content}
+                    settings={settings}
+                    theme={theme}
+                    scaleFactor={0.15}
+                    isExporting={true} // True forces precise pixel rendering instead of viewport relative
+                />
             </div>
         );
     };
@@ -123,11 +96,11 @@ const MiniPage: React.FC<{ page: PageData; layout?: LayoutTemplate }> = ({ page,
     const scaledGridConfig = layout.isCustom ? '' : scaleTailwindClasses(layout.gridConfig);
 
     return (
-        <div 
-            className="w-full h-full relative bg-white overflow-hidden" 
-            style={{ 
+        <div
+            className="w-full h-full relative bg-white overflow-hidden"
+            style={{
                 backgroundColor: page.backgroundColor,
-                containerType: 'inline-size' as any 
+                containerType: 'inline-size' as any
             }}
         >
             {layout.backgroundImage && (
@@ -150,12 +123,14 @@ const MiniPage: React.FC<{ page: PageData; layout?: LayoutTemplate }> = ({ page,
 export const RightSidebar: React.FC<RightSidebarProps> = ({
     spreads,
     currentSpreadIndex,
+    activePageSide,
     onSelectSpread,
     onAddPages,
     onClearAll,
     totalPages,
     maxPages,
     layouts,
+    theme,
     onClose
 }) => {
     return (
@@ -203,9 +178,9 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                         return (
                             <div key={spread.id} className="flex flex-col gap-2 items-center">
                                 <button
-                                    onClick={() => onSelectSpread(idx)}
-                                    className={`flex transition-all bg-white p-2 shadow-sm
-                                ${isSelected
+                                    onClick={() => onSelectSpread(idx, 'right')}
+                                    className={`flex transition-all bg-white p-2 shadow-sm relative
+                                ${isSelected && activePageSide === 'right'
                                             ? 'ring-2 ring-blue-400'
                                             : 'hover:ring-1 hover:ring-gray-300'
                                         }
@@ -213,8 +188,11 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                                     style={{ width: '50%', aspectRatio: '1 / 1.414' }} // A4 Vertical
                                 >
                                     <div className="w-full h-full border border-gray-200">
-                                        <MiniPage page={spread.rightPage} layout={layoutRight} />
+                                        <MiniPage page={spread.rightPage} layout={layoutRight} theme={theme} />
                                     </div>
+                                    {isSelected && activePageSide === 'right' && (
+                                        <div className="absolute top-0 right-0 -mt-2 -mr-2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-sm" />
+                                    )}
                                 </button>
                                 <span className="text-[10px] text-gray-400 font-medium">Обложка</span>
                             </div>
@@ -224,9 +202,8 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                     // SPREADS
                     return (
                         <div key={spread.id} className="flex flex-col gap-2 items-center">
-                            <button
-                                onClick={() => onSelectSpread(idx)}
-                                className={`w-full flex transition-all bg-white p-1 shadow-sm
+                            <div
+                                className={`w-full flex transition-all bg-white p-1 shadow-sm relative
                             ${isSelected
                                         ? 'ring-2 ring-blue-400'
                                         : 'hover:ring-1 hover:ring-gray-300'
@@ -237,16 +214,20 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                                 {/* Thumbnail Visuals */}
                                 <div className="w-full h-full flex gap-1 bg-gray-50 border border-gray-200">
                                     {/* Left Page Thumbnail */}
-                                    <div className="flex-1 h-full bg-white relative">
-                                        <MiniPage page={spread.leftPage} layout={layoutLeft} />
-                                    </div>
-
-                                    {/* Right Page Thumbnail */}
-                                    <div className="flex-1 h-full bg-white relative">
-                                        <MiniPage page={spread.rightPage} layout={layoutRight} />
-                                    </div>
+                                    <button
+                                        onClick={() => onSelectSpread(idx, 'left')}
+                                        className={`flex-1 overflow-hidden relative border-r transition-all ${isSelected && activePageSide === 'left' ? 'ring-2 ring-blue-500 z-10 scale-[1.02] shadow-md' : 'hover:bg-black/5 block'}`}
+                                    >
+                                        <MiniPage page={spread.leftPage} layout={layoutLeft} theme={theme} />
+                                    </button>
+                                    <button
+                                        onClick={() => onSelectSpread(idx, 'right')}
+                                        className={`flex-1 overflow-hidden relative transition-all ${isSelected && activePageSide === 'right' ? 'ring-2 ring-blue-500 z-10 scale-[1.02] shadow-md' : 'hover:bg-black/5 block'}`}
+                                    >
+                                        <MiniPage page={spread.rightPage} layout={layoutRight} theme={theme} />
+                                    </button>
                                 </div>
-                            </button>
+                            </div>
 
                             {/* Labels */}
                             <div className="w-full flex justify-between px-1 text-[10px] text-gray-400 font-medium">

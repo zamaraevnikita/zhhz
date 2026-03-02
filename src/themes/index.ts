@@ -130,7 +130,7 @@ export const THEMES: ThemeConfig[] = [
     name: '14 февраля',
     description: 'Романтический подарок',
     price: '5 390 ₽',
-    previewImage: 'https://images.unsplash.com/photo-1518930255481-69766465d3d4?q=80&w=600&auto=format&fit=crop',
+    previewImage: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=600&auto=format&fit=crop',
     colors: {
       primary: '#b91c1c',
       secondary: '#f87171',

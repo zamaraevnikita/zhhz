@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { AppView, Project, ThemeConfig } from '../types';
 import { THEMES } from '../themes';
-import { generateId } from '../utils';
-import { generateSpreads } from '../services/spreadService';
 import { useAuth } from '../context/AuthContext';
+import { fetchApi } from '../utils/api';
+import { generateSpreads } from '../services/spreadService';
 
 export interface UseProjectsReturn {
     currentView: AppView;
@@ -11,14 +11,12 @@ export interface UseProjectsReturn {
     projects: Project[];
     activeProjectId: string | null;
     currentTheme: ThemeConfig | null;
-    startNewProject: (theme: ThemeConfig) => { project: Project; spreads: ReturnType<typeof generateSpreads> };
+    startNewProject: (theme: ThemeConfig) => Promise<{ project: Project; spreads: ReturnType<typeof generateSpreads> }>;
     openProject: (project: Project, theme?: ThemeConfig) => { theme: ThemeConfig; spreads: ReturnType<typeof generateSpreads> };
-    updateProject: (projectId: string, updates: Partial<Project>) => void;
+    updateProject: (projectId: string, updates: Partial<Project>) => Promise<void>;
+    deleteProject: (projectId: string) => Promise<void>;
 }
 
-/**
- * Хук для управления проектами, навигацией по экранам и темами.
- */
 export function useProjects(): UseProjectsReturn {
     const { currentUser, role } = useAuth();
     const [currentView, setCurrentView] = useState<AppView>('dashboard');
@@ -26,26 +24,37 @@ export function useProjects(): UseProjectsReturn {
     const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
     const [currentTheme, setCurrentTheme] = useState<ThemeConfig | null>(null);
 
-    // Создание демо-проекта при первом запуске
+    // Fetch projects from backend. When user logs in, first claim any guest projects.
     useEffect(() => {
-        if (projects.length === 0) {
-            const demoTheme = THEMES[2];
-            const demoProject: Project = {
-                id: 'demo-1',
-                name: 'Твое Портфолио',
-                themeId: demoTheme.id,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                previewUrl: demoTheme.previewImage,
-                spreads: [],
-                pageCount: 24,
-                price: '2000 ₽',
-            };
-            setProjects([demoProject]);
-        }
-    }, []);
+        const loadProjects = async () => {
+            try {
+                // If user just logged in and we have guest projects in state, claim them first
+                if (currentUser) {
+                    const guestProjectIds = projects
+                        .filter(p => !p.userId)
+                        .map(p => p.id);
 
-    // Загрузка шрифтов темы
+                    if (guestProjectIds.length > 0) {
+                        // Silently claim guest projects — errors are non-fatal
+                        await fetchApi('/projects/claim', {
+                            method: 'PATCH',
+                            body: JSON.stringify({ projectIds: guestProjectIds })
+                        }).catch(err => console.warn('Failed to claim guest projects:', err));
+                    }
+                }
+
+                const data = await fetchApi<Project[]>('/projects');
+                setProjects(data);
+            } catch (err) {
+                console.error("Failed to load projects", err);
+            }
+        };
+
+        loadProjects();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentUser]); // Re-fetch when user logs in/out
+
+    // Theme Font Loading
     useEffect(() => {
         if (currentTheme) {
             const linkId = 'theme-fonts';
@@ -56,35 +65,41 @@ export function useProjects(): UseProjectsReturn {
                 link.rel = 'stylesheet';
                 document.head.appendChild(link);
             }
-            let fontQuery = '';
+            let fontQuery = 'family=Inter:wght@300;400;600';
             if (currentTheme.id === 'lookbook') fontQuery = 'family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600';
             if (currentTheme.id === 'valentine') fontQuery = 'family=Great+Vibes&family=Lato:wght@300;400;700';
             if (currentTheme.id === 'astrology') fontQuery = 'family=Cinzel:wght@400;700&family=Montserrat:wght@300;400';
             if (currentTheme.id === 'memories') fontQuery = 'family=Courier+Prime:wght@400;700&family=Merriweather:wght@300;400';
-            if (!fontQuery) fontQuery = 'family=Inter:wght@300;400;600';
             link.href = `https://fonts.googleapis.com/css2?${fontQuery}&display=swap`;
         }
     }, [currentTheme]);
 
-    const startNewProject = useCallback((theme: ThemeConfig) => {
+    const startNewProject = useCallback(async (theme: ThemeConfig) => {
         const newSpreads = generateSpreads();
-        const newProject: Project = {
-            id: generateId(),
-            name: 'Новый проект',
-            themeId: theme.id,
-            userId: currentUser?.id,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            previewUrl: theme.previewImage,
-            spreads: newSpreads,
-            pageCount: 20,
-            price: theme.price,
-        };
-        setProjects(prev => [...prev, newProject]);
-        setCurrentTheme(theme);
-        setActiveProjectId(newProject.id);
-        setCurrentView('editor');
-        return { project: newProject, spreads: newSpreads };
+
+        try {
+            // Wait for DB to generate ID and save
+            const savedProject = await fetchApi<Project>('/projects', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: 'Новый проект',
+                    themeId: theme.id,
+                    isCustom: false,
+                    price: theme.price,
+                    spreads: newSpreads
+                })
+            });
+
+            setProjects(prev => [savedProject, ...prev]);
+            setCurrentTheme(theme);
+            setActiveProjectId(savedProject.id);
+            setCurrentView('editor');
+
+            return { project: savedProject, spreads: newSpreads };
+        } catch (e) {
+            console.error("Failed to start new project", e);
+            throw e;
+        }
     }, [currentUser]);
 
     const openProject = useCallback((project: Project, theme?: ThemeConfig) => {
@@ -92,21 +107,42 @@ export function useProjects(): UseProjectsReturn {
         setCurrentTheme(pTheme);
         setActiveProjectId(project.id);
         setCurrentView('editor');
-        const initialSpreads = project.spreads.length > 0 ? project.spreads : generateSpreads();
+        const initialSpreads = project.spreads?.length > 0 ? project.spreads : generateSpreads();
         return { theme: pTheme, spreads: initialSpreads };
     }, []);
 
-    const updateProject = useCallback((projectId: string, updates: Partial<Project>) => {
+    const updateProject = useCallback(async (projectId: string, updates: Partial<Project>) => {
+        // Optimistic UI update
         setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...updates } : p));
+
+        try {
+            await fetchApi<Project>(`/projects/${projectId}`, {
+                method: 'PUT',
+                body: JSON.stringify(updates)
+            });
+        } catch (e) {
+            console.error("Failed to sync project update to backend", e);
+            // In a robust implementation, revert the optimistic update here.
+        }
+    }, []);
+
+    const deleteProject = useCallback(async (projectId: string) => {
+        setProjects(prev => prev.filter(p => p.id !== projectId));
+        try {
+            await fetchApi(`/projects/${projectId}`, { method: 'DELETE' });
+        } catch (e) {
+            console.error("Failed to delete", e);
+        }
     }, []);
 
     const visibleProjects = useMemo(() => {
+        // Since backend already filters for GUEST/USER correctly (see backend router),
+        // we mainly trust the data. But if we want local filtering:
         return projects.filter(p => {
             if (role === 'ADMIN') return true;
-            if (role === 'GUEST') return !p.userId;
-            return p.userId === currentUser?.id;
+            return true; // The backend only sent us what we are allowed to see
         });
-    }, [projects, role, currentUser]);
+    }, [projects, role]);
 
     return {
         currentView,
@@ -117,5 +153,6 @@ export function useProjects(): UseProjectsReturn {
         startNewProject,
         openProject,
         updateProject,
+        deleteProject
     };
 }

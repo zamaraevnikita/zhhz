@@ -140,8 +140,11 @@ export const PhotoEditorModal: React.FC<PhotoEditorModalProps> = ({
                 {/* Content */}
                 <div className="flex flex-col lg:flex-row">
                     {/* Image Preview */}
-                    <div className="lg:w-1/2 p-6 flex items-center justify-center bg-black/20 min-h-[300px]">
-                        <div className="relative w-full max-w-[300px] aspect-[3/4] rounded-lg overflow-hidden shadow-lg bg-black/40">
+                    <div className="lg:w-1/2 p-6 flex flex-col items-center justify-center bg-black/20 min-h-[300px]">
+                        <div
+                            className="relative w-full max-w-[300px] rounded-lg overflow-hidden shadow-lg bg-black/40"
+                            style={{ aspectRatio: `${slotWidthPercent * 1200} / ${slotHeightPercent * 1696.8}` }}
+                        >
                             <img
                                 src={imageUrl}
                                 alt="Preview"

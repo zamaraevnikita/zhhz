@@ -20,10 +20,16 @@ export default function PDFExporter({ pages, customLayouts, theme, getImageDimsB
     const pdfRef = useRef<jsPDF | null>(null);
 
     useEffect(() => {
+        let isCancelled = false;
+
         // Prevent re-running if we already generated the preview
         if (previewUrl || progress > 0) return;
 
         const generatePdf = async () => {
+            // Force window to top to prevent html2canvas clipping bugs
+            const originalScrollY = window.scrollY;
+            window.scrollTo(0, 0);
+
             // Give all components ample time to mount and images to start loading
             await new Promise(resolve => setTimeout(resolve, 1500));
 
@@ -39,6 +45,8 @@ export default function PDFExporter({ pages, customLayouts, theme, getImageDimsB
                 const qualityScale = pages.length > 20 ? 2 : 3;
 
                 for (let i = 0; i < pages.length; i++) {
+                    if (isCancelled) break;
+
                     const pageElement = containerRefs.current[i];
                     if (!pageElement) {
                         console.warn(`Element for page ${i} not found, skipping`);
@@ -50,6 +58,13 @@ export default function PDFExporter({ pages, customLayouts, theme, getImageDimsB
                         useCORS: true,
                         allowTaint: true,
                         backgroundColor: '#ffffff',
+                        windowWidth: 1200,
+                        windowHeight: 1697,
+                        x: 0,
+                        y: 0,
+                        scrollX: 0,
+                        scrollY: 0,
+                        logging: false
                     });
 
                     const imgData = canvas.toDataURL('image/jpeg', 0.95);
@@ -62,17 +77,25 @@ export default function PDFExporter({ pages, customLayouts, theme, getImageDimsB
                     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
                     pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-                    setProgress(Math.round(((i + 1) / pages.length) * 100));
+                    if (!isCancelled) { // Only update progress if not cancelled
+                        setProgress(Math.round(((i + 1) / pages.length) * 100));
+                    }
                 }
 
-                // Generate Blob URL for preview rather than downloading immediately
-                const blob = pdf.output('blob');
-                const builtUrl = URL.createObjectURL(blob);
-                setPreviewUrl(builtUrl);
-
+                if (!isCancelled) {
+                    // Generate Blob URL for preview rather than downloading immediately
+                    // Using 'bloburl' directly from jsPDF for convenience
+                    const pdfBlobUrl = pdfRef.current.output('bloburl');
+                    setPreviewUrl(pdfBlobUrl);
+                }
             } catch (err) {
-                console.error("Error generating PDF:", err);
-                onError(err);
+                if (!isCancelled) {
+                    console.error("Error generating PDF:", err);
+                    onError(err);
+                }
+            } finally {
+                // Restore original scroll even on error or cancellation
+                window.scrollTo(0, originalScrollY);
             }
         };
 
@@ -143,13 +166,15 @@ export default function PDFExporter({ pages, customLayouts, theme, getImageDimsB
             <span className="mt-3 text-sm font-bold text-gray-300">{progress}%</span>
 
             {/* Hidden container for rendering all pages to ensure they are in DOM at once */}
-            <div className="fixed top-[-9999px] left-[-9999px] overflow-visible opacity-0 pointer-events-none" aria-hidden="true">
+            <div className="absolute top-0 left-0 -z-50 overflow-visible opacity-0 pointer-events-none" aria-hidden="true">
                 <div className="flex flex-col gap-4">
                     {pages.map((page, index) => (
                         <div
                             key={index}
-                            ref={el => containerRefs.current[index] = el}
-                            style={{ width: '1200px', height: '1697px', backgroundColor: page.backgroundColor || theme.colors.background }}
+                            ref={el => {
+                                if (el) containerRefs.current[index] = el;
+                            }}
+                            style={{ width: '1200px', height: '1697px', backgroundColor: page.backgroundColor || theme?.colors?.background || '#ffffff' }}
                         >
                             <PageRenderer
                                 pageData={page}

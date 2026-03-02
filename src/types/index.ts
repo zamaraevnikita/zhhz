@@ -3,25 +3,32 @@ export type UserRole = 'GUEST' | 'USER' | 'ADMIN';
 export interface User {
   id: string;
   name: string;
-  email: string;
+  phone: string;
+  email?: string; // Optional for receipts
   role: UserRole;
 }
 
 export interface OrderItem {
-  project: Project; // We store a snapshot of the project as it was ordered
+  projectId: string;       // Reference to the ordered project
+  name: string;            // Project name at time of order
+  themeId: string;         // Theme at time of order
   quantity: number;
   pricePerUnit: number;
+  // Legacy format support: some old orders stored a full project snapshot
+  project?: { name?: string; previewUrl?: string; pageCount?: number;[key: string]: any };
 }
 
 export interface Order {
   id: string;
-  userId: string | undefined; // Undefined if guest checking out, or we could force login
+  userId: string;
   customerName: string;
-  customerEmail: string;
+  customerPhone: string;
+  customerEmail?: string;
   items: OrderItem[];
   totalAmount: number;
   createdAt: Date;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered';
+  // Status uses uppercase to match backend DB values
+  status: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED';
 }
 
 export interface UploadedImage {
@@ -70,10 +77,10 @@ export interface LayoutSlot {
     h: number;
   };
   rotation?: number;
-  opacity?: number;      // New: 0 to 1
-  borderRadius?: number; // New: percentage or px
-  zIndex?: number;       // New: layer order
-  locked?: boolean;      // New: prevent movement
+  opacity?: number;
+  borderRadius?: number;
+  zIndex?: number;
+  locked?: boolean;
   /** Предзаполнение: для IMAGE — URL фото, для TEXT — текст. При применении макета к странице копируется в content. */
   defaultContent?: string;
   /** Позиция фото в слоте (object-position %). При применении макета копируется в slotSettings.cropX/cropY. */
@@ -85,12 +92,12 @@ export interface LayoutSlot {
 export interface LayoutTemplate {
   id: string;
   name: string;
-  thumbnail: string; // Can be a URL if custom
+  thumbnail: string;
   slots: LayoutSlot[];
-  gridConfig: string; // Keep for legacy, empty if custom
+  gridConfig: string;
   tags?: string[];
-  backgroundImage?: string; // New: Custom layout background
-  isCustom?: boolean; // New: Flag
+  backgroundImage?: string;
+  isCustom?: boolean;
 }
 
 export interface PageContent {
@@ -150,18 +157,18 @@ export interface Project {
   id: string;
   name: string;
   themeId: string;
-  userId?: string; // Optional for anonymous guest projects
+  userId?: string;
   createdAt: Date;
   updatedAt: Date;
-  previewUrl: string; // URL of the cover image
+  previewUrl: string;
   spreads: Spread[];
   pageCount: number;
   price: string;
 }
 
 export interface CartItem {
-  projectId: string; // Links to Project.id
+  projectId: string;
   quantity: number;
   pricePerUnit: number;
-  addedAt: string; // ISO string representing exact time the cart snapshot was taken
+  addedAt: string; // ISO string
 }

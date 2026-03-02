@@ -18,6 +18,7 @@ import { useImages } from './hooks/useImages';
 import { useEditor } from './hooks/useEditor';
 import { useCart } from './hooks/useCart';
 import { useAuth } from './context/AuthContext';
+import { useLayouts } from './hooks/useLayouts';
 
 const App: React.FC = () => {
   // --- Hooks ---
@@ -30,49 +31,31 @@ const App: React.FC = () => {
     onSpreadsChange: useCallback((newSpreads, newTotalPages) => {
       images.recalculateUsage(newSpreads);
       if (projects.activeProjectId) {
+        // Fire and forget optimistic update
         projects.updateProject(projects.activeProjectId, {
           spreads: newSpreads,
           pageCount: newTotalPages,
           updatedAt: new Date(),
-        });
+        }).catch(err => console.error("Auto-save failed", err));
       }
     }, [images, projects]),
   });
 
-  // --- Layouts (persisted) ---
-  const [availableLayouts, setAvailableLayouts] = useState<LayoutTemplate[]>(() => {
-    try {
-      const saved = localStorage.getItem('periodica_layouts');
-      const list: LayoutTemplate[] = saved ? JSON.parse(saved) : STATIC_LAYOUTS;
-      return list.map(l => normalizeLayoutRects(l));
-    } catch (e) {
-      return STATIC_LAYOUTS.map(l => normalizeLayoutRects(l));
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem('periodica_layouts', JSON.stringify(availableLayouts));
-  }, [availableLayouts]);
+  const { layouts: availableLayouts, saveLayout: handleAdminSaveLayout, deleteLayout: handleDeleteLayout } = useLayouts();
 
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024);
   const [isExporting, setIsExporting] = useState(false);
-
-  const handleAdminSaveLayout = (newLayout: LayoutTemplate) => {
-    const normalized = normalizeLayoutRects(newLayout);
-    setAvailableLayouts(prev => {
-      const exists = prev.find(l => l.id === normalized.id);
-      return exists ? prev.map(l => l.id === normalized.id ? normalized : l) : [...prev, normalized];
-    });
-  };
-
-  const handleDeleteLayout = (layoutId: string) => {
-    setAvailableLayouts(prev => prev.filter(l => l.id !== layoutId));
-  };
+  const [isSaving, setIsSaving] = useState(false);
 
   // --- Orchestration (connecting hooks) ---
-  const handleStartNewProject = (theme: typeof projects.currentTheme & {}) => {
-    const { spreads } = projects.startNewProject(theme);
-    editor.initEditor(spreads);
+  const handleStartNewProject = async (theme: typeof projects.currentTheme & {}) => {
+    try {
+      const { spreads } = await projects.startNewProject(theme);
+      editor.initEditor(spreads);
+    } catch (e: any) {
+      console.error('[handleStartNewProject] Failed:', e?.message || e);
+      alert(`Ошибка при создании проекта: ${e?.message || 'Проверьте соединение.'}`);
+    }
   };
 
   const handleOpenProject = (project: Parameters<typeof projects.openProject>[0]) => {
@@ -104,11 +87,17 @@ const App: React.FC = () => {
   }
 
   if (projects.currentView === 'dashboard') {
+    if (editor.viewMode === 'cart') {
+      return <CartView projects={projects.projects} onBack={() => {
+        editor.setViewMode('editor');
+      }} />;
+    }
+
     return (
       <Dashboard
         projects={projects.projects}
         activeProjectId={projects.activeProjectId}
-        onCreateProject={() => projects.setCurrentView('theme_selection')}
+        onNewProject={() => projects.setCurrentView('theme_selection')}
         onProjectSelect={(id) => {
           const p = projects.projects.find(x => x.id === id);
           if (p) {
@@ -137,7 +126,12 @@ const App: React.FC = () => {
 
   if (editor.viewMode === 'cart') {
     return <CartView projects={projects.projects} onBack={() => {
-      editor.setViewMode('editor');
+      // If there is no active project or we were on dashboard, go back to dashboard
+      if (projects.currentView === 'dashboard') {
+        editor.setViewMode('editor'); // reset editor view
+      } else {
+        editor.setViewMode('editor');
+      }
     }} />;
   }
 
@@ -222,13 +216,47 @@ const App: React.FC = () => {
               {isPreview ? <Icons.Edit size={15} /> : <Icons.Eye size={15} />}
               <span className="hidden md:inline">{isPreview ? 'Редактор' : 'Просмотр'}</span>
             </button>
-            <button
-              onClick={() => setIsExporting(true)}
-              disabled={isExporting}
-              className="hidden sm:flex items-center justify-center h-8 bg-[#FFEDEF] hover:bg-[#ffe0e3] text-gray-800 px-4 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-            >
-              {isExporting ? 'Сохранение...' : 'Сохранить'}
-            </button>
+            {role === 'ADMIN' ? (
+              <button
+                onClick={() => setIsExporting(true)}
+                disabled={isExporting}
+                className="hidden sm:flex items-center justify-center h-8 bg-[#FFEDEF] hover:bg-[#ffe0e3] text-gray-800 px-4 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+              >
+                {isExporting ? 'Сохранение...' : 'Сохранить'}
+              </button>
+            ) : (
+              <button
+                onClick={async () => {
+                  try {
+                    setIsSaving(true);
+                    // Force save the actual active project first
+                    if (projects.activeProjectId) {
+                      await projects.updateProject(projects.activeProjectId, {
+                        spreads: editor.spreadsHistory.current
+                      });
+                    }
+
+                    // Add it to cart and redirect
+                    const currentProj = projects.projects.find(p => p.id === projects.activeProjectId);
+                    if (currentProj) {
+                      addToCart(currentProj);
+                      editor.setViewMode('cart');
+                    } else {
+                      alert("Ошибка: Невозможно добавить в корзину. Проект не найден.");
+                    }
+                  } catch (e) {
+                    console.error("Failed to add to cart", e);
+                    alert("Ошибка при сохранении в корзину.");
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+                disabled={isSaving}
+                className="hidden sm:flex items-center justify-center gap-1.5 h-8 bg-gray-900 border hover:bg-black text-white px-4 rounded-lg text-[10px] uppercase tracking-wider font-bold transition-colors disabled:opacity-50"
+              >
+                {isSaving ? 'ОБРАБОТКА...' : <>В КОРЗИНУ <Icons.Cart size={14} /></>}
+              </button>
+            )}
             <button onClick={() => editor.setViewMode('cart')} className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors shrink-0 relative" title="Корзина">
               <Icons.Cart size={15} />
               {cartItemCount > 0 && (
@@ -349,7 +377,22 @@ const App: React.FC = () => {
                     <Icons.Close size={16} />
                   </button>
                 </div>
-                <RightSidebar spreads={editor.spreads} currentSpreadIndex={editor.currentSpreadIndex} onSelectSpread={(idx) => { editor.setCurrentSpreadIndex(idx); editor.setIsMobilePagesOpen(false); }} onAddPages={editor.addPages} onClearAll={editor.handleClearAllPages} totalPages={editor.totalPages} maxPages={32} layouts={availableLayouts} />
+                <RightSidebar
+                  spreads={editor.spreads}
+                  currentSpreadIndex={editor.currentSpreadIndex}
+                  activePageSide={editor.activePageSide}
+                  onSelectSpread={(idx, side) => {
+                    editor.setCurrentSpreadIndex(idx);
+                    if (side) editor.setActivePageSide(side);
+                    editor.setIsMobilePagesOpen(false);
+                  }}
+                  onAddPages={editor.addPages}
+                  onClearAll={editor.handleClearAllPages}
+                  totalPages={editor.totalPages}
+                  maxPages={32}
+                  layouts={availableLayouts}
+                  theme={projects.currentTheme}
+                />
               </div>
             </div>
           </>
@@ -359,7 +402,7 @@ const App: React.FC = () => {
       {
         isExporting && (
           <PDFExporter
-            pages={editor.spreads.flatMap(s => [s.leftPage, s.rightPage])}
+            pages={editor.spreads.flatMap((s, i) => i === 0 ? [s.rightPage] : [s.leftPage, s.rightPage])}
             theme={projects.currentTheme}
             customLayouts={availableLayouts}
             getImageDimsByUrl={images.getImageDimsByUrl}
