@@ -5,6 +5,7 @@ import { Dashboard } from './components/Dashboard';
 import { AdminPanel } from './components/AdminPanel';
 import { CartView } from './components/CartView';
 import { EditorView } from './components/EditorView';
+import { MainPage } from './components/MainPage';
 import { Icons } from './components/IconComponents';
 
 // Hooks
@@ -20,7 +21,8 @@ const App: React.FC = () => {
 
   return (
     <Routes>
-      <Route path="/" element={
+      <Route path="/" element={<MainPage />} />
+      <Route path="/projects" element={
         <Dashboard
           projects={projects.projects}
           activeProjectId={projects.activeProjectId}

@@ -5,12 +5,16 @@ import {
     SlotType,
     SidebarTab,
     LayoutTemplate,
+    UploadedImage,
     PageContent,
+    DesignTemplate,
 } from '../types';
 import { deepClone } from '../utils';
 import { useHistory, UseHistoryReturn } from './useHistory';
 import { createSpread } from '../services/spreadService';
 import { buildPageFromLayout } from '../services/layoutService';
+import { autoFillSpreads } from '../services/autoFillService';
+import { applyDesignTemplate as applyTemplateService } from '../services/designTemplateService';
 
 export interface UseEditorReturn {
     // Spreads (with history)
@@ -45,6 +49,9 @@ export interface UseEditorReturn {
     handleBackgroundSelect: (color: string) => void;
     addPages: () => void;
     handleClearAllPages: () => void;
+    autoFillPhotos: (images: UploadedImage[], layouts: LayoutTemplate[]) => number;
+    applyDesignTemplate: (template: DesignTemplate, layouts: LayoutTemplate[], images: UploadedImage[]) => number;
+    reorderSpreads: (oldIndex: number, newIndex: number) => void;
 
     // Init
     initEditor: (initialSpreads: Spread[]) => void;
@@ -152,8 +159,44 @@ export function useEditor(params: {
         }
     }, [spreads, updateSpreads]);
 
+    const autoFillPhotos = useCallback((images: UploadedImage[], layouts: LayoutTemplate[]): number => {
+        const { spreads: filled, filledCount } = autoFillSpreads(spreads, images, layouts);
+        if (filledCount > 0) {
+            updateSpreads(filled);
+        }
+        return filledCount;
+    }, [spreads, updateSpreads]);
+
+    const applyDesignTemplate = useCallback((template: DesignTemplate, layouts: LayoutTemplate[], images: UploadedImage[]): number => {
+        const { spreads: newSpreads, filledCount } = applyTemplateService(spreads, template, layouts, images);
+        updateSpreads(newSpreads);
+        return filledCount;
+    }, [spreads, updateSpreads]);
+
+    const reorderSpreads = useCallback((oldIndex: number, newIndex: number) => {
+        // Prevent moving cover (0) or flyleaf (1)
+        if (oldIndex < 2 || newIndex < 2) return;
+        if (oldIndex === newIndex) return;
+        if (oldIndex >= spreads.length || newIndex >= spreads.length) return;
+
+        const newSpreads = [...spreads];
+        const [movedSpread] = newSpreads.splice(oldIndex, 1);
+        newSpreads.splice(newIndex, 0, movedSpread);
+
+        updateSpreads(newSpreads);
+        
+        // If the current spread was moved, keep it selected at the new index
+        if (currentSpreadIndex === oldIndex) {
+            setCurrentSpreadIndex(newIndex);
+        } else if (currentSpreadIndex > oldIndex && currentSpreadIndex <= newIndex) {
+            setCurrentSpreadIndex(currentSpreadIndex - 1);
+        } else if (currentSpreadIndex < oldIndex && currentSpreadIndex >= newIndex) {
+            setCurrentSpreadIndex(currentSpreadIndex + 1);
+        }
+    }, [spreads, currentSpreadIndex, updateSpreads]);
+
     const initEditor = useCallback((initialSpreads: Spread[]) => {
-        spreadsHistory.set(initialSpreads);
+        spreadsHistory.init(initialSpreads);
         setCurrentSpreadIndex(0);
         setActivePageSide('right');
         setSelectedSlot(null);
@@ -183,6 +226,9 @@ export function useEditor(params: {
         handleBackgroundSelect,
         addPages,
         handleClearAllPages,
+        autoFillPhotos,
+        applyDesignTemplate,
+        reorderSpreads,
         initEditor,
     };
 }

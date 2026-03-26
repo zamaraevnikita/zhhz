@@ -123,7 +123,7 @@ export interface Spread {
 
 export type AppView = 'dashboard' | 'theme_selection' | 'editor' | 'cart';
 export type ViewMode = 'editor' | 'preview' | 'admin' | 'cart';
-export type SidebarTab = 'gallery' | 'templates' | 'backgrounds' | 'text';
+export type SidebarTab = 'gallery' | 'templates' | 'backgrounds' | 'text' | 'design';
 
 // --- Theme System ---
 
@@ -139,6 +139,21 @@ export interface ThemeColors {
 export interface ThemeFonts {
   heading: string;
   body: string;
+}
+
+export interface PagePreset {
+  layoutId: string;
+  backgroundColor?: string;
+  textDefaults?: Partial<SlotSettings>;
+}
+
+export interface DesignTemplate {
+  id: string;
+  name: string;
+  description: string;
+  themeId: string;
+  previewUrl: string;
+  pagePresets: PagePreset[];
 }
 
 export interface ThemeConfig {

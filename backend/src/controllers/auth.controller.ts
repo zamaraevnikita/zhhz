@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { get, run, runTransaction } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
@@ -63,8 +64,49 @@ export const requestOtp = async (req: Request, res: Response) => {
         pendingPasswordHash,
     });
 
-    // TODO: Replace with real SMS delivery (e.g. SMS Aero)
-    console.log(`[SMS MOCK] OTP for ${phone}: ${otp}`);
+    // --- SMS Stub / Integration ---
+    const isDev = process.env.NODE_ENV !== 'production';
+    
+    if (isDev) {
+        console.log('--------------------------------------------------');
+        console.log(`[DEV MODE] SMS OTP for ${phone}: ${otp}`);
+        console.log('--------------------------------------------------');
+    } else {
+        try {
+            const smsAeroEmail = process.env.SMSAERO_EMAIL;
+            const smsAeroKey = process.env.SMSAERO_API_KEY;
+            const smsAeroSign = process.env.SMSAERO_SIGN || "SMS Aero";
+
+            if (!smsAeroEmail || !smsAeroKey) {
+                console.error('[SMS Aero] Missing credentials in .env');
+                return res.status(500).json({ error: 'Внутренняя ошибка сервиса отправки СМС' });
+            }
+
+            // Compliant text message
+            const text = `Код для входа на сайт Review.com: ${otp}. Никому не сообщайте этот код.`;
+
+            const basicAuth = Buffer.from(`${smsAeroEmail}:${smsAeroKey}`).toString('base64');
+            const url = `https://gate.smsaero.ru/v2/sms/send?number=${phone}&text=${encodeURIComponent(text)}&sign=${encodeURIComponent(smsAeroSign)}`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Basic ${basicAuth}`
+                }
+            });
+
+            const data = await response.json();
+            if (!data.success) {
+                console.error('[SMS Aero API Error]:', data.message);
+                return res.status(400).json({ error: 'Не удалось отправить СМС на данный номер. Проверьте правильность ввода.' });
+            }
+
+            console.log(`[SMS Aero] Successfully sent OTP to ${phone}`);
+        } catch (e) {
+            console.error('[SMS Aero Network Error]:', e);
+            return res.status(500).json({ error: 'Сервис отправки СМС временно недоступен' });
+        }
+    }
 
     res.json({ message: 'OTP sent successfully', success: true });
 };
@@ -154,7 +196,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
     otpStore.delete(phone);
 
     try {
-        let user = await get<any>(`SELECT * FROM User WHERE phone = ?`, [phone]);
+        let user = await get<any>(`SELECT id, phone, name, email, role, passwordHash FROM User WHERE phone = ?`, [phone]);
 
         if (!user) {
             // Create new user using pending registration data
@@ -165,7 +207,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
                     params: [id, phone, entry.pendingName || '', entry.pendingEmail || null, entry.pendingPasswordHash || null, 'USER']
                 }
             ]);
-            user = await get<any>(`SELECT * FROM User WHERE id = ?`, [id]);
+            user = await get<any>(`SELECT id, phone, name, email, role FROM User WHERE id = ?`, [id]);
         } else {
             // Existing user: fill in missing profile data from pending entry
             const updates: string[] = [];
@@ -182,7 +224,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
                         params
                     }
                 ]);
-                user = await get<any>(`SELECT * FROM User WHERE id = ?`, [user.id]);
+                user = await get<any>(`SELECT id, phone, name, email, role FROM User WHERE id = ?`, [user.id]);
             }
         }
 
@@ -207,7 +249,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 export const me = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user.userId;
+        const userId = (req as AuthenticatedRequest).user!.userId;
         const user = await get<any>(`SELECT id, phone, name, email, role, createdAt FROM User WHERE id = ?`, [userId]);
 
         if (!user) return res.status(404).json({ error: 'User not found' });

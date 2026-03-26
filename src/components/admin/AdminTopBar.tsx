@@ -1,10 +1,10 @@
 import React from 'react';
 import { Icons } from '../IconComponents';
-import { LayoutGrid, ShoppingCart } from 'lucide-react';
+import { LayoutGrid, ShoppingCart, Palette } from 'lucide-react';
 
 interface AdminTopBarProps {
-    adminTab: 'layouts' | 'orders';
-    setAdminTab: (tab: 'layouts' | 'orders') => void;
+    adminTab: 'layouts' | 'orders' | 'design_templates';
+    setAdminTab: (tab: 'layouts' | 'orders' | 'design_templates') => void;
     onClose: () => void;
 }
 
@@ -34,6 +34,12 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({ adminTab, setAdminTab,
                         className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${adminTab === 'orders' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
                     >
                         <ShoppingCart size={14} /> Заказы
+                    </button>
+                    <button
+                        onClick={() => setAdminTab('design_templates')}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${adminTab === 'design_templates' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <Palette size={14} /> Шаблоны дизайна
                     </button>
                 </div>
             </div>

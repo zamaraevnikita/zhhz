@@ -1,5 +1,11 @@
-// In dev: Vite proxy forwards /api to localhost:4000 (no CORS issues)
-// In prod: set VITE_API_URL to absolute URL of the deployed backend
+// ══════════════════════════════════════════════════════════════════════
+// MOCK MODE — бэкенд не нужен!
+// Все вызовы fetchApi перенаправляются в mockApi.ts (localStorage).
+// Чтобы вернуть реальный бэкенд — раскомментируйте блок ниже.
+// ══════════════════════════════════════════════════════════════════════
+
+import { mockFetchApi } from './mockApi';
+
 export const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Module-level logout callback — set by AuthContext on mount
@@ -8,6 +14,10 @@ export const setLogoutCallback = (cb: () => void) => {
     _logoutCallback = cb;
 };
 
+// All API calls go through the mock
+export const fetchApi = mockFetchApi;
+
+/* ── ORIGINAL fetchApi (uncomment to use real backend) ─────────────────
 export const fetchApi = async <T>(
     endpoint: string,
     options: RequestInit = {}
@@ -28,7 +38,6 @@ export const fetchApi = async <T>(
         headers
     });
 
-    // Auto-logout on 401 (expired/invalid token)
     if (response.status === 401) {
         localStorage.removeItem('periodica_token');
         if (_logoutCallback) _logoutCallback();
@@ -46,3 +55,4 @@ export const fetchApi = async <T>(
 
     return data as T;
 };
+────────────────────────────────────────────────────────────────────── */

@@ -44,8 +44,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
 
             try {
-                const data = await fetchApi<{ user: User }>('/auth/me');
-                setCurrentUser(data.user);
+                if (token === 'mock-jwt-token') {
+                     setCurrentUser({
+                         id: 'mock-user-id',
+                         phone: '+7 (999) 000-00-00',
+                         name: 'Тестовый Пользователь',
+                         email: 'test@example.com',
+                         role: 'USER'
+                     });
+                } else {
+                    const data = await fetchApi<{ user: User }>('/auth/me');
+                    setCurrentUser(data.user);
+                }
             } catch (error) {
                 console.error("Failed to restore session", error);
                 localStorage.removeItem(TOKEN_KEY);
@@ -61,35 +71,54 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const role: UserRole = currentUser?.role || 'GUEST';
 
     const login = async (phone: string, password: string) => {
-        const data = await fetchApi<{ user: User, token: string }>('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ phone, password })
-        });
-        localStorage.setItem(TOKEN_KEY, data.token);
-        setCurrentUser(data.user);
+        // MOCKED: Accept any password and simulate success.
+        const mockUser: User = {
+            id: 'mock-user-id',
+            phone: phone,
+            name: 'Тестовый Пользователь',
+            email: 'test@example.com',
+            role: 'USER'
+        };
+        localStorage.setItem(TOKEN_KEY, 'mock-jwt-token');
+        setCurrentUser(mockUser);
+        console.log("[MOCK] Login successful. User logged in as:", mockUser);
     };
 
     const requestOtp = async (phone: string, profile?: { name?: string; email?: string; password?: string }): Promise<void> => {
-        await fetchApi('/auth/request-otp', {
-            method: 'POST',
-            body: JSON.stringify({ phone, ...profile })
-        });
-        // Backend generates a random OTP and (in prod) sends via SMS.
-        // In dev, the code is printed in the backend console.
+        // MOCKED: No backend call needed. Just simulate success.
+        console.log(`[MOCK] Requested OTP for ${phone}. Use code 1111.`);
+        // To make it fully usable without backend, we store the profile locally for the verification step
+        if (profile) {
+             (window as any).__mockProfile = profile;
+        }
     };
 
     const verifyOtp = async (phone: string, code: string) => {
-        const data = await fetchApi<{ user: User, token: string }>('/auth/verify-otp', {
-            method: 'POST',
-            body: JSON.stringify({ phone, code })
-        });
+        // MOCKED: Accept any code (e.g. 1111) and simulate success.
+        if (code !== '1111') {
+             throw new Error("Неверный код. Используйте 1111.");
+        }
+        
+        const profile = (window as any).__mockProfile || {};
+        
+        const mockUser: User = {
+            id: 'mock-user-id',
+            phone: phone,
+            name: profile.name || 'Тестовый Пользователь',
+            email: profile.email || 'test@example.com',
+            role: 'USER'
+        };
 
-        localStorage.setItem(TOKEN_KEY, data.token);
-        setCurrentUser(data.user);
+        localStorage.setItem(TOKEN_KEY, 'mock-jwt-token');
+        setCurrentUser(mockUser);
+        console.log("[MOCK] Verification successful. User logged in as:", mockUser);
     };
 
     const setDevRole = (newRole: UserRole) => {
-        if (!currentUser) return;
+        if (!currentUser) {
+            setCurrentUser({ id: 'dev-user', phone: '+123', role: newRole } as User);
+            return;
+        }
         setCurrentUser({ ...currentUser, role: newRole });
     };
 

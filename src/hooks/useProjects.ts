@@ -13,6 +13,7 @@ export interface UseProjectsReturn {
     openProject: (project: Project, theme?: ThemeConfig) => { theme: ThemeConfig; spreads: ReturnType<typeof generateSpreads> };
     updateProject: (projectId: string, updates: Partial<Project>) => Promise<void>;
     deleteProject: (projectId: string) => Promise<void>;
+    loadProjectById: (id: string) => Promise<Project>;
 }
 
 export function useProjects(): UseProjectsReturn {
@@ -50,6 +51,22 @@ export function useProjects(): UseProjectsReturn {
         loadProjects();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentUser]); // Re-fetch when user logs in/out
+
+    // Fetch a single project by ID if not in list
+    const loadProjectById = useCallback(async (id: string) => {
+        try {
+            const project = await fetchApi<Project>(`/projects/${id}`);
+            setProjects(prev => {
+                const exists = prev.some(p => p.id === id);
+                if (exists) return prev.map(p => p.id === id ? project : p);
+                return [...prev, project];
+            });
+            return project;
+        } catch (err) {
+            console.error(`Failed to load project ${id}`, err);
+            throw err;
+        }
+    }, []);
 
     // Theme Font Loading
     useEffect(() => {
@@ -146,6 +163,7 @@ export function useProjects(): UseProjectsReturn {
         startNewProject,
         openProject,
         updateProject,
-        deleteProject
+        deleteProject,
+        loadProjectById
     };
 }

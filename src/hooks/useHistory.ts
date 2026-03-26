@@ -18,6 +18,8 @@ export interface UseHistoryReturn<T> {
     canUndo: boolean;
     /** Можно ли повторить */
     canRedo: boolean;
+    /** Инициализировать сбросив историю */
+    init: (initial: T) => void;
 }
 
 /**
@@ -60,39 +62,49 @@ export function useHistory<T>(initial: T, maxLength = 20): UseHistoryReturn<T> {
     const undo = useCallback(() => {
         setIndex(prev => {
             if (prev > 0) {
-                const newIndex = prev - 1;
-                setHistory(h => {
-                    setCurrent(deepClone(h[newIndex]));
-                    return h;
-                });
-                return newIndex;
+                return prev - 1;
             }
             return prev;
         });
     }, []);
 
-    const redo = useCallback(() => {
-        setIndex(prev => {
-            setHistory(h => {
-                if (prev < h.length - 1) {
-                    const newIndex = prev + 1;
-                    setCurrent(deepClone(h[newIndex]));
-                    return h;
-                }
-                return h;
-            });
-            return prev < history.length - 1 ? prev + 1 : prev;
-        });
-    }, [history.length]);
+
+    // Better undo:
+    const performUndo = useCallback(() => {
+        if (index > 0) {
+            const newIndex = index - 1;
+            setIndex(newIndex);
+            setCurrent(deepClone(history[newIndex]));
+        }
+    }, [index, history]);
+
+    const performRedo = useCallback(() => {
+        if (index < history.length - 1) {
+            const newIndex = index + 1;
+            setIndex(newIndex);
+            setCurrent(deepClone(history[newIndex]));
+        }
+    }, [index, history]);
+
+    const init = useCallback((value: T) => {
+        const cloned = deepClone(value);
+        setCurrent(cloned);
+        setHistory([cloned]);
+        setIndex(0);
+        currentRef.current = cloned;
+    }, []);
+
+    // old redo removed
 
     return {
         current,
         set,
         replace,
         commit,
-        undo,
-        redo,
+        undo: performUndo,
+        redo: performRedo,
         canUndo: index > 0,
         canRedo: index < history.length - 1,
+        init,
     };
 }

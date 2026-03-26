@@ -39,7 +39,7 @@ export const SlotRenderer: React.FC<SlotRendererProps> = ({
         return 'none';
     };
 
-    const isRounded = slot.className.includes('rounded-full');
+    const isRounded = (slot.className || '').includes('rounded-full');
 
     // Container Style merging external (rect positioning) + internal rules
     const containerStyle: React.CSSProperties = {
@@ -108,7 +108,7 @@ export const SlotRenderer: React.FC<SlotRendererProps> = ({
             : (settings.letterSpacing ? `${settings.letterSpacing}em` : 'normal');
 
         const textStyle: React.CSSProperties = {
-            fontFamily: settings.fontFamily || (slot.className.includes('handwriting') ? theme?.fonts?.heading || 'Times New Roman' : theme?.fonts?.body || 'Arial'),
+            fontFamily: settings.fontFamily || ((slot.className || '').includes('handwriting') ? theme?.fonts?.heading || 'Times New Roman' : theme?.fonts?.body || 'Arial'),
             fontSize: scaleFactor !== 1 ? calculatedFontSize : `${exportFontSize}px`,
             fontWeight: settings.fontWeight || 'normal',
             fontStyle: settings.fontStyle || 'normal',

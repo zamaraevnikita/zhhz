@@ -30,9 +30,19 @@ export const EditorView: React.FC = () => {
     const [isExporting, setIsExporting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
+    const [fetchError, setFetchError] = useState(false);
 
     const activeProject = projects.projects.find(p => p.id === projectId);
     const currentTheme = activeProject ? (THEMES.find(t => t.id === activeProject.themeId) || THEMES[0]) : null;
+
+    useEffect(() => {
+        if (!activeProject && projectId && !fetchError) {
+            projects.loadProjectById(projectId).catch((err) => {
+                console.error("Project not found", err);
+                setFetchError(true);
+            });
+        }
+    }, [activeProject, projectId, fetchError, projects]);
 
     const editor = useEditor({
         onSpreadsChange: useCallback((newSpreads, newTotalPages) => {
@@ -77,9 +87,21 @@ export const EditorView: React.FC = () => {
         }
     }, [currentTheme]);
 
+    if (fetchError) {
+        return (
+            <div className="flex flex-col h-screen w-screen items-center justify-center bg-gray-50 text-gray-500 gap-4">
+                <Icons.Eye className="text-red-400" size={48} />
+                <h2 className="text-xl font-bold text-gray-800">Проект не найден</h2>
+                <p>Возможно, он был удален или у вас нет доступа.</p>
+                <button onClick={() => navigate('/')} className="mt-4 px-6 py-2 bg-gray-900 hover:bg-black text-white rounded-lg font-bold">На главную</button>
+            </div>
+        );
+    }
+
     if (!activeProject || !currentTheme || !isInitialized) {
         return (
-            <div className="flex h-screen w-screen items-center justify-center bg-gray-50 text-gray-500">
+            <div className="flex flex-col h-screen w-screen items-center justify-center bg-gray-50 text-gray-500 gap-4">
+                <div className="w-8 h-8 rounded-full border-2 border-gray-300 border-t-gray-900 animate-spin"></div>
                 Загрузка проекта...
             </div>
         );
@@ -87,6 +109,9 @@ export const EditorView: React.FC = () => {
 
     const safeSpreadIndex = Math.min(editor.currentSpreadIndex, editor.spreads.length - 1);
     const currentSpread = editor.spreads[safeSpreadIndex];
+
+    if (!currentSpread) return null;
+
     const isPreview = editor.viewMode === 'preview';
     const isCover = editor.currentSpreadIndex === 0;
 
@@ -96,8 +121,6 @@ export const EditorView: React.FC = () => {
         if (currentSpread.leftPage.type !== 'flyleaf') leftPageNumber = startPage.toString();
         if (currentSpread.rightPage.type !== 'flyleaf') rightPageNumber = (startPage + 1).toString();
     }
-
-    if (!currentSpread) return null;
 
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-gray-50 text-gray-800 font-sans">
@@ -122,6 +145,31 @@ export const EditorView: React.FC = () => {
                         currentSpread={currentSpread}
                         isPanelOpen={isLeftPanelOpen}
                         onTogglePanel={setIsLeftPanelOpen}
+                        onAutoFill={() => {
+                            const count = editor.autoFillPhotos(images.uploadedImages, availableLayouts);
+                            if (count > 0) {
+                                // Быстрый toast-уведомление
+                                const toast = document.createElement('div');
+                                toast.textContent = `✨ Заполнено ${count} слотов`;
+                                toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg z-50 animate-bounce';
+                                document.body.appendChild(toast);
+                                setTimeout(() => toast.remove(), 2500);
+                            } else {
+                                const toast = document.createElement('div');
+                                toast.textContent = 'Все слоты уже заполнены';
+                                toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg z-50';
+                                document.body.appendChild(toast);
+                                setTimeout(() => toast.remove(), 2500);
+                            }
+                        }}
+                        onApplyTemplate={(tmpl) => {
+                            const count = editor.applyDesignTemplate(tmpl, availableLayouts, images.uploadedImages);
+                            const toast = document.createElement('div');
+                            toast.textContent = `🎨 Шаблон применен (сохранено ${count} фото)`;
+                            toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg z-50 animate-bounce';
+                            document.body.appendChild(toast);
+                            setTimeout(() => toast.remove(), 3000);
+                        }}
                     />
                     {/* Left sidebar toggle — desktop only */}
                     <button
@@ -336,6 +384,7 @@ export const EditorView: React.FC = () => {
                                     maxPages={32}
                                     layouts={availableLayouts}
                                     theme={currentTheme}
+                                    onReorderSpreads={editor.reorderSpreads}
                                 />
                             </div>
                         </div>

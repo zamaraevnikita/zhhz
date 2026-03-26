@@ -2,6 +2,13 @@ import { Request, Response } from 'express';
 import { get, all, run, runTransaction } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
+
+// Helper: safely parse JSON from DB, returning fallback on failure
+const safeJsonParse = (str: string | null | undefined, fallback: any = []) => {
+    if (!str) return fallback;
+    try { return JSON.parse(str); } catch { return fallback; }
+};
 
 const pageContentSchema = z.object({
     id: z.string().max(50),
@@ -31,14 +38,14 @@ const updateProjectSchema = createProjectSchema.partial();
 
 export const getProjects = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?.userId;
+        const userId = (req as AuthenticatedRequest).user?.userId;
 
         if (!userId) {
             return res.json([]);
         }
 
-        const limit = parseInt(req.query.limit as string) || 50;
-        const offset = parseInt(req.query.offset as string) || 0;
+        const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 200);
+        const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
 
         const projects = await all<any>(
             `SELECT * FROM Project WHERE userId = ? ORDER BY updatedAt DESC LIMIT ? OFFSET ?`,
@@ -48,7 +55,7 @@ export const getProjects = async (req: Request, res: Response) => {
         const mapped = projects.map(p => ({
             ...p,
             isCustom: Boolean(p.isCustom),
-            spreads: JSON.parse(p.spreads)
+            spreads: safeJsonParse(p.spreads)
         }));
 
         res.json(mapped);
@@ -60,8 +67,8 @@ export const getProjects = async (req: Request, res: Response) => {
 export const getProject = async (req: Request, res: Response) => {
     try {
         const id = req.params.id as string;
-        const userId = (req as any).user?.userId;
-        const role = (req as any).user?.role;
+        const userId = (req as AuthenticatedRequest).user?.userId;
+        const role = (req as AuthenticatedRequest).user?.role;
 
         const project = await get<any>(`SELECT * FROM Project WHERE id = ?`, [id]);
         if (!project) return res.status(404).json({ error: 'Project not found' });
@@ -74,7 +81,7 @@ export const getProject = async (req: Request, res: Response) => {
         res.json({
             ...project,
             isCustom: Boolean(project.isCustom),
-            spreads: JSON.parse(project.spreads)
+            spreads: safeJsonParse(project.spreads)
         });
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch project' });
@@ -84,7 +91,7 @@ export const getProject = async (req: Request, res: Response) => {
 export const createProject = async (req: Request, res: Response) => {
     try {
         // userId MUST come from the JWT, not the request body
-        const userId = (req as any).user?.userId || null;
+        const userId = (req as AuthenticatedRequest).user?.userId || null;
 
         const parseResult = createProjectSchema.safeParse(req.body);
         if (!parseResult.success) {
@@ -108,7 +115,7 @@ export const createProject = async (req: Request, res: Response) => {
         res.status(201).json({
             ...project,
             isCustom: Boolean(project?.isCustom),
-            spreads: JSON.parse(project?.spreads || '[]')
+            spreads: safeJsonParse(project?.spreads)
         });
     } catch (error) {
         console.error(error);
@@ -120,8 +127,8 @@ export const updateProject = async (req: Request, res: Response) => {
     try {
         const id = req.params.id as string;
         const updates = req.body;
-        const userId = (req as any).user?.userId;
-        const role = (req as any).user?.role;
+        const userId = (req as AuthenticatedRequest).user?.userId;
+        const role = (req as AuthenticatedRequest).user?.role;
 
         const existing = await get<any>(`SELECT * FROM Project WHERE id = ?`, [id]);
         if (!existing) return res.status(404).json({ error: 'Not found' });
@@ -157,7 +164,7 @@ export const updateProject = async (req: Request, res: Response) => {
         res.json({
             ...project,
             isCustom: Boolean(project?.isCustom),
-            spreads: JSON.parse(project?.spreads || '[]')
+            spreads: safeJsonParse(project?.spreads)
         });
     } catch (error) {
         console.error(error);
@@ -168,8 +175,8 @@ export const updateProject = async (req: Request, res: Response) => {
 export const deleteProject = async (req: Request, res: Response) => {
     try {
         const id = req.params.id as string;
-        const userId = (req as any).user?.userId;
-        const role = (req as any).user?.role;
+        const userId = (req as AuthenticatedRequest).user?.userId;
+        const role = (req as AuthenticatedRequest).user?.role;
 
         const existing = await get<any>(`SELECT * FROM Project WHERE id = ?`, [id]);
         if (!existing) return res.status(404).json({ error: 'Project not found' });
@@ -193,7 +200,7 @@ export const deleteProject = async (req: Request, res: Response) => {
  */
 export const claimProjects = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?.userId;
+        const userId = (req as AuthenticatedRequest).user?.userId;
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
         const { projectIds } = req.body;

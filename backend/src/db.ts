@@ -52,7 +52,7 @@ export const initDb = async () => {
       themeId TEXT NOT NULL,
       isCustom BOOLEAN DEFAULT 0,
       spreads TEXT NOT NULL,
-      price INTEGER,
+      price TEXT,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(userId) REFERENCES User(id) ON DELETE CASCADE
@@ -77,6 +77,18 @@ export const initDb = async () => {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       slots TEXT NOT NULL,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS DesignTemplate (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      themeId TEXT NOT NULL,
+      previewUrl TEXT,
+      pagePresets TEXT NOT NULL,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { UploadedImage, SidebarTab, LayoutTemplate, ThemeConfig, SlotSettings, Spread, SlotType } from '../types';
+import { UploadedImage, SidebarTab, LayoutTemplate, ThemeConfig, SlotSettings, Spread, SlotType, DesignTemplate } from '../types';
 import { Icons } from './IconComponents';
+import { DesignTemplatePanel } from './editor/DesignTemplatePanel';
 
 interface SidebarProps {
     activeTab: SidebarTab;
@@ -22,6 +23,8 @@ interface SidebarProps {
     isLeftPageSelected: boolean;
     isPanelOpen?: boolean;
     onTogglePanel?: (open: boolean) => void;
+    onAutoFill?: () => void;
+    onApplyTemplate: (template: DesignTemplate) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -42,6 +45,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     currentSpread,
     isPanelOpen: externalPanelOpen,
     onTogglePanel,
+    onAutoFill,
+    onApplyTemplate,
 }) => {
     const [internalPanelOpen, setInternalPanelOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
     const [internalSelectedLayoutCategory, setInternalSelectedLayoutCategory] = useState<string>('all');
@@ -90,6 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div className="bg-white border-gray-200 z-50 flex items-center lg:flex-col py-0 lg:py-6 gap-2 sm:gap-5 justify-around lg:justify-start px-4 lg:px-0 w-full lg:w-14 h-14 lg:h-full border-t lg:border-t-0 flex-shrink-0 relative">
                     <button onClick={() => handleTabClick('gallery')} className={`w-10 h-10 flex items-center justify-center rounded-md transition-all ${activeTab === 'gallery' && isPanelOpen ? 'bg-black text-white' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}><Icons.Image size={20} strokeWidth={1.5} /></button>
                     <button onClick={() => handleTabClick('templates')} className={`w-10 h-10 flex items-center justify-center rounded-md transition-all ${activeTab === 'templates' && isPanelOpen ? 'bg-black text-white' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}><Icons.Layout size={20} strokeWidth={1.5} /></button>
+                    <button onClick={() => handleTabClick('design')} className={`w-10 h-10 flex items-center justify-center rounded-md transition-all ${activeTab === 'design' && isPanelOpen ? 'bg-black text-white' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`} title="Шаблоны дизайна"><Icons.Palette size={20} strokeWidth={1.5} /></button>
                     <button onClick={() => handleTabClick('backgrounds')} className={`w-10 h-10 flex items-center justify-center rounded-md transition-all ${activeTab === 'backgrounds' && isPanelOpen ? 'bg-black text-white' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}><Icons.PaintBucket size={20} strokeWidth={1.5} /></button>
                     <button onClick={() => handleTabClick('text')} className={`w-10 h-10 flex items-center justify-center rounded-md transition-all ${activeTab === 'text' && isPanelOpen ? 'bg-black text-white' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}><Icons.Type size={20} strokeWidth={1.5} /></button>
                     <button onClick={() => setIsPanelOpen(!isPanelOpen)} className="lg:hidden w-10 h-10 flex items-center justify-center text-gray-400"><Icons.ChevronDown size={20} className={`transition-transform duration-300 ${isPanelOpen ? '' : 'rotate-180'}`} /></button>
@@ -104,7 +110,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <div className="flex flex-col flex-1 min-h-0 w-full lg:w-64 overflow-hidden">
                         {activeTab === 'gallery' && (
                             <div className="flex flex-col h-full min-h-0">
-                                <div className="p-2 lg:p-3 border-b border-gray-100 shrink-0"><label className="flex items-center justify-center w-full py-2 lg:py-2.5 bg-[#FFEDEF] hover:bg-[#ffe0e3] text-gray-900 rounded-lg cursor-pointer transition-colors gap-1.5"><Icons.Plus size={16} /><span className="text-xs font-medium">Загрузить фото</span><input type="file" className="hidden" multiple accept="image/*" onChange={(e) => { onUpload(e); e.target.value = ''; }} /></label></div>
+                                <div className="p-2 lg:p-3 border-b border-gray-100 shrink-0 space-y-1.5"><label className="flex items-center justify-center w-full py-2 lg:py-2.5 bg-[#FFEDEF] hover:bg-[#ffe0e3] text-gray-900 rounded-lg cursor-pointer transition-colors gap-1.5"><Icons.Plus size={16} /><span className="text-xs font-medium">Загрузить фото</span><input type="file" className="hidden" multiple accept="image/*" onChange={(e) => { onUpload(e); e.target.value = ''; }} /></label>{uploadedImages.length > 0 && onAutoFill && <button onClick={onAutoFill} className="flex items-center justify-center w-full py-2 lg:py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white rounded-lg transition-all gap-1.5 shadow-sm hover:shadow-md"><span className="text-base">✨</span><span className="text-xs font-medium">Заполнить автоматически</span></button>}</div>
                                 <div className="flex-1 overflow-y-auto p-2 lg:p-3 custom-scrollbar min-h-0"><div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-2 gap-1.5 lg:gap-2">{uploadedImages.map((img) => (<div key={img.id} className={`relative group aspect-square bg-gray-100 rounded-sm overflow-hidden border border-gray-100 hover:border-blue-400 transition-all ${canClickPlaceImage ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`} draggable onDragStart={(e) => handleDragStart(e, img.url)} onClick={() => { if (!canClickPlaceImage || !selectedSlotId || !selectedSlotSide) return; onPlaceImage(selectedSlotSide, selectedSlotId, img.url); if (window.innerWidth < 1024) setIsPanelOpen(false); }}><img src={img.url} alt="Uploaded" className={`w-full h-full object-cover transition-opacity ${img.usedCount > 0 ? 'opacity-50 grayscale' : 'opacity-100'}`} />{img.usedCount > 0 && <div className="absolute top-1 right-1 bg-white text-gray-900 rounded-full p-0.5 shadow-sm"><Icons.Check size={10} /></div>}</div>))}</div>{uploadedImages.length === 0 && <div className="text-center text-gray-400 text-sm mt-10 px-4">Загрузите фото</div>}{canClickPlaceImage && <div className="text-center text-gray-400 text-[10px] mt-3">Клик по фото вставит его в выбранный блок</div>}</div>
                                 <div className="p-2 lg:p-3 border-t border-gray-100 bg-gray-50 shrink-0"><button onClick={onClearPhotos} className="w-full py-1.5 bg-white border border-gray-200 text-gray-600 text-[10px] lg:text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors">Очистить все</button></div>
                             </div>
@@ -155,6 +161,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     </div>
                                 </div>
                             </div>
+                        )}
+                        {activeTab === 'design' && (
+                            <DesignTemplatePanel
+                                themeId={theme.id}
+                                onApplyTemplate={onApplyTemplate}
+                                onClosePanel={() => { if (window.innerWidth < 1024) setIsPanelOpen(false); }}
+                            />
                         )}
                         {activeTab === 'backgrounds' && (
                             <div className="flex flex-col h-full p-2 lg:p-3 overflow-y-auto min-h-0"><h3 className="text-xs font-medium text-gray-900 mb-2 lg:mb-3">Цвета темы</h3><div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-4 gap-2 lg:gap-3">{theme.colors.palette.map((color) => (<button key={color} onClick={() => { onBackgroundSelect(color); if (window.innerWidth < 1024) setIsPanelOpen(false); }} className="w-8 h-8 lg:w-10 lg:h-10 rounded-full border border-gray-200 shadow-sm hover:scale-110 transition-transform ring-2 ring-transparent hover:ring-blue-400" style={{ backgroundColor: color }} title={color} />))}<button onClick={() => onBackgroundSelect('#ffffff')} className="w-8 h-8 lg:w-10 lg:h-10 rounded-full border border-gray-200 shadow-sm hover:scale-110 transition-transform bg-white flex items-center justify-center text-red-400 text-xs" title="Сброс">✕</button></div></div>

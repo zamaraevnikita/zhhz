@@ -12,6 +12,7 @@ import { AdminOrders } from './admin/AdminOrders';
 import { AdminLayoutSidebar } from './admin/AdminLayoutSidebar';
 import { AdminPanelLayoutArea } from './admin/AdminPanelLayoutArea';
 import { AdminPanelProperties } from './admin/AdminPanelProperties';
+import { AdminDesignTemplates } from './admin/AdminDesignTemplates';
 
 interface AdminPanelProps {
     layouts: LayoutTemplate[];
@@ -24,7 +25,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ layouts, onSaveLayout, o
     const admin = useAdminPanel(layouts);
     const { editingLayout, activeSlot, activeSlotId } = admin;
     const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null);
-    const [adminTab, setAdminTab] = React.useState<'layouts' | 'orders'>('layouts');
+    const [adminTab, setAdminTab] = React.useState<'layouts' | 'orders' | 'design_templates'>('layouts');
 
     const { orders } = useOrders();
     const { getImageDimsByUrl } = useImages();
@@ -82,6 +83,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ layouts, onSaveLayout, o
 
                 {adminTab === 'orders' && (
                     <AdminOrders orders={orders} setExportProject={setExportProject} />
+                )}
+
+                {adminTab === 'design_templates' && (
+                    <AdminDesignTemplates />
                 )}
 
                 {/* ===== LAYOUTS BUILDER ===== */}

@@ -174,7 +174,7 @@ export const PageRenderer: React.FC<PageRendererProps> = ({
               {layout.slots.map((slot) => {
                 const content = pageData.content[slot.id];
                 const settings = pageData.slotSettings?.[slot.id] || {};
-                const isRounded = slot.className.includes('rounded-full');
+                const isRounded = (slot.className || '').includes('rounded-full');
                 const isCropping = croppingSlotId === slot.id;
                 const isSlotSelected = selectedSlotId === slot.id;
 
@@ -207,7 +207,7 @@ export const PageRenderer: React.FC<PageRendererProps> = ({
                   return (
                     <div
                       key={slot.id}
-                      className={`group hover:z-10 transition-colors ring-2 ${slot.className} ${isRounded ? 'rounded-full' : ''} ${readOnly ? 'ring-transparent' : (isSlotSelected ? 'ring-blue-500 z-10' : 'ring-transparent hover:ring-blue-300 z-0')}`}
+                      className={`group hover:z-10 transition-colors ring-2 ${slot.className || ''} ${isRounded ? 'rounded-full' : ''} ${readOnly ? 'ring-transparent' : (isSlotSelected ? 'ring-blue-500 z-10' : 'ring-transparent hover:ring-blue-300 z-0')}`}
                       onDrop={(e) => handleDrop(e, slot.id)}
                       onDragOver={handleDragOver}
                       onClick={(e) => !readOnly && e.stopPropagation()}
@@ -339,7 +339,7 @@ export const PageRenderer: React.FC<PageRendererProps> = ({
                             }}
                             className="absolute inset-0 w-full h-full bg-transparent resize-none focus:outline-none z-10 m-0"
                             style={{
-                              fontFamily: settings.fontFamily || (slot.className.includes('handwriting') ? theme.fonts.heading : theme.fonts.body),
+                              fontFamily: settings.fontFamily || ((slot.className || '').includes('handwriting') ? theme.fonts.heading : theme.fonts.body),
                               fontSize: settings.fontSize ? `${(settings.fontSize / 5.2) * 12}px` : '36px',
                               fontWeight: settings.fontWeight || 'normal',
                               fontStyle: settings.fontStyle || 'normal',

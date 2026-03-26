@@ -2,6 +2,12 @@ import { Request, Response } from 'express';
 import { get, all, run } from '../db';
 import { z } from 'zod';
 
+// Helper: safely parse JSON from DB, returning fallback on failure
+const safeJsonParse = (str: string | null | undefined, fallback: any = []) => {
+    if (!str) return fallback;
+    try { return JSON.parse(str); } catch { return fallback; }
+};
+
 // Define schemas to prevent JSON bombs and type spoofing
 const layoutSlotSchema = z.object({
     id: z.string().max(50),
@@ -27,12 +33,18 @@ const saveLayoutSchema = z.object({
 // GET /api/layouts
 export const getLayouts = async (req: Request, res: Response) => {
     try {
-        const layouts = await all<any>(`SELECT * FROM LayoutTemplate ORDER BY createdAt DESC`);
+        const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 100, 1), 500);
+        const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+
+        const layouts = await all<any>(
+            `SELECT * FROM LayoutTemplate ORDER BY createdAt DESC LIMIT ? OFFSET ?`,
+            [limit, offset]
+        );
 
         // Parse the slots JSON back to object format before sending
         const mapped = layouts.map(l => ({
             ...l,
-            slots: JSON.parse(l.slots)
+            slots: safeJsonParse(l.slots)
         }));
 
         res.json(mapped);
@@ -75,6 +87,13 @@ export const saveLayout = async (req: Request, res: Response) => {
 export const deleteLayout = async (req: Request, res: Response) => {
     try {
         const id = req.params.id as string;
+
+        // Check if layout exists before deleting
+        const existing = await get<any>(`SELECT id FROM LayoutTemplate WHERE id = ?`, [id]);
+        if (!existing) {
+            return res.status(404).json({ error: 'Layout not found' });
+        }
+
         await run(`DELETE FROM LayoutTemplate WHERE id = ?`, [id]);
         res.json({ success: true, deleted: id });
     } catch (error) {

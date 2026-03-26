@@ -2,15 +2,27 @@ import { Request, Response } from 'express';
 import { get, all, run } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
+
+// Helper: safely parse JSON from DB, returning fallback on failure
+const safeJsonParse = (str: string | null | undefined, fallback: any = []) => {
+    if (!str) return fallback;
+    try { return JSON.parse(str); } catch { return fallback; }
+};
 
 const orderItemSchema = z.object({
-    id: z.string().max(100),
-    type: z.enum(['photo', 'text', 'asset']),
-    price: z.number().min(0)
-}).passthrough(); // Allow other fields on items for now, but ensure it's structurally an object
+    projectId: z.string().max(100),
+    quantity: z.number().min(1),
+    pricePerUnit: z.number().min(0),
+    name: z.string().optional(),
+    themeId: z.string().optional(),
+    id: z.string().optional(), // Match backend if provided
+    type: z.string().optional(), // Match backend if provided
+    price: z.number().optional() // Match backend if provided
+}).passthrough();
 
 const createOrderSchema = z.object({
-    totalAmount: z.number().int("Amount must be an integer").positive("Amount must be positive"),
+    totalAmount: z.number().positive("Amount must be positive"),
     items: z.array(orderItemSchema).min(1, "Order must have at least one item").max(200, "Maximum 200 items allowed per order"),
     customerName: z.string().max(100).optional().default(''),
     customerPhone: z.string().max(50).optional().default(''),
@@ -23,22 +35,25 @@ const updateOrderStatusSchema = z.object({
 
 export const getOrders = async (req: Request, res: Response) => {
     try {
-        const { userId } = (req as any).user;
+        const { userId } = (req as AuthenticatedRequest).user!;
 
         // Fetch fresh role from DB to prevent token caching issues
         const userRow = await get<any>('SELECT role FROM User WHERE id = ?', [userId]);
         const trueRole = userRow?.role || 'USER';
 
+        const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 200);
+        const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+
         let orders;
         if (trueRole === 'ADMIN') {
-            orders = await all<any>(`SELECT * FROM \`Order\` ORDER BY createdAt DESC`);
+            orders = await all<any>(`SELECT * FROM \`Order\` ORDER BY createdAt DESC LIMIT ? OFFSET ?`, [limit, offset]);
         } else {
-            orders = await all<any>(`SELECT * FROM \`Order\` WHERE userId = ? ORDER BY createdAt DESC`, [userId]);
+            orders = await all<any>(`SELECT * FROM \`Order\` WHERE userId = ? ORDER BY createdAt DESC LIMIT ? OFFSET ?`, [userId, limit, offset]);
         }
 
         const mapped = orders.map(o => ({
             ...o,
-            items: JSON.parse(o.items)
+            items: safeJsonParse(o.items)
         }));
 
         res.json(mapped);
@@ -50,7 +65,7 @@ export const getOrders = async (req: Request, res: Response) => {
 export const getOrder = async (req: Request, res: Response) => {
     try {
         const id = req.params.id as string;
-        const { userId } = (req as any).user;
+        const { userId } = (req as AuthenticatedRequest).user!;
 
         // Fetch fresh role from DB
         const userRow = await get<any>('SELECT role FROM User WHERE id = ?', [userId]);
@@ -65,7 +80,7 @@ export const getOrder = async (req: Request, res: Response) => {
 
         res.json({
             ...order,
-            items: JSON.parse(order.items)
+            items: safeJsonParse(order.items)
         });
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch order' });
@@ -74,7 +89,7 @@ export const getOrder = async (req: Request, res: Response) => {
 
 export const createOrder = async (req: Request, res: Response) => {
     try {
-        const { userId } = (req as any).user;
+        const { userId } = (req as AuthenticatedRequest).user!;
 
         const parseResult = createOrderSchema.safeParse(req.body);
         if (!parseResult.success) {
@@ -95,7 +110,7 @@ export const createOrder = async (req: Request, res: Response) => {
 
         res.status(201).json({
             ...order,
-            items: JSON.parse(order?.items || '[]')
+            items: safeJsonParse(order?.items)
         });
     } catch (error) {
         console.error(error);
@@ -106,7 +121,7 @@ export const createOrder = async (req: Request, res: Response) => {
 export const updateOrderStatus = async (req: Request, res: Response) => {
     try {
         const id = req.params.id as string;
-        const { userId } = (req as any).user;
+        const { userId } = (req as AuthenticatedRequest).user!;
 
         const parseResult = updateOrderStatusSchema.safeParse(req.body);
         if (!parseResult.success) {
@@ -132,7 +147,7 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
         );
 
         const order = await get<any>(`SELECT * FROM \`Order\` WHERE id = ?`, [id]);
-        res.json({ ...order, items: JSON.parse(order?.items || '[]') });
+        res.json({ ...order, items: safeJsonParse(order?.items) });
     } catch (error) {
         res.status(500).json({ error: 'Failed to update order status' });
     }
