@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { ThemeSelection } from './components/ThemeSelection';
-import { Dashboard } from './components/Dashboard';
-import { AdminPanel } from './components/AdminPanel';
-import { CartView } from './components/CartView';
-import { EditorView } from './components/EditorView';
-import { MainPage } from './components/MainPage';
+
+const ThemeSelection = lazy(() => import('./components/ThemeSelection').then(m => ({ default: m.ThemeSelection })));
+const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
+const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
+const CartView = lazy(() => import('./components/CartView').then(m => ({ default: m.CartView })));
+const EditorView = lazy(() => import('./components/EditorView').then(m => ({ default: m.EditorView })));
+const MainPage = lazy(() => import('./components/MainPage').then(m => ({ default: m.MainPage })));
 import { Icons } from './components/IconComponents';
 
 // Hooks
@@ -20,7 +21,8 @@ const App: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <Routes>
+    <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center font-bold text-xl uppercase tracking-widest text-[#CCCCCC]">Загрузка...</div>}>
+      <Routes>
       <Route path="/" element={<MainPage />} />
       <Route path="/projects" element={
         <Dashboard
@@ -76,7 +78,8 @@ const App: React.FC = () => {
         )
       } />
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 };
 

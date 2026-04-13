@@ -96,14 +96,35 @@ export const createOrder = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Invalid order data', details: parseResult.error.issues });
         }
 
-        const { totalAmount, items, customerName, customerPhone, customerEmail } = parseResult.data;
+        const { items, customerName, customerPhone, customerEmail } = parseResult.data;
 
         const id = uuidv4();
-        const itemsStr = JSON.stringify(items);
+        
+        let calculatedTotal = 0;
+        const verifiedItems = [];
+
+        for (const item of items) {
+             // 1. Fetch the authentic price from the database
+             const project = await get<any>('SELECT price FROM Project WHERE id = ?', [item.projectId]);
+             if (!project) return res.status(404).json({ error: `Проект ${item.projectId} не найден.` });
+             
+             // 2. Parse the price (fallback to 6500 if project has no price set)
+             const realPrice = parseInt(project.price) || 6500; 
+             calculatedTotal += realPrice * item.quantity;
+             
+             // 3. Override client-provided prices with authentic ones
+             verifiedItems.push({
+                 ...item,
+                 pricePerUnit: realPrice,
+                 price: realPrice * item.quantity 
+             });
+        }
+
+        const itemsStr = JSON.stringify(verifiedItems);
 
         await run(
             `INSERT INTO \`Order\` (id, userId, status, totalAmount, items, customerName, customerPhone, customerEmail) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id, userId, 'PENDING', totalAmount, itemsStr, customerName || '', customerPhone || '', customerEmail || null]
+            [id, userId, 'PENDING', calculatedTotal, itemsStr, customerName || '', customerPhone || '', customerEmail || null]
         );
 
         const order = await get<any>(`SELECT * FROM \`Order\` WHERE id = ?`, [id]);

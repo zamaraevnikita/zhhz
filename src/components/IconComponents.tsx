@@ -43,7 +43,8 @@ import {
   PanelRightOpen,
   Minus,
   TriangleAlert,
-  GripVertical
+  GripVertical,
+  Menu
 } from 'lucide-react';
 
 export const Icons = {
@@ -90,5 +91,6 @@ export const Icons = {
   PanelRightOpen,
   Minus,
   TriangleAlert,
-  GripVertical
+  GripVertical,
+  Menu
 };

@@ -39,15 +39,16 @@ export const PageRenderer: React.FC<PageRendererProps> = ({
   const [croppingSlotId, setCroppingSlotId] = useState<string | null>(null);
   const [photoEditorSlot, setPhotoEditorSlot] = useState<{ slotId: string; imageUrl: string; slotW: number; slotH: number } | null>(null);
 
-  // Master Canvas Scaling Logic guarantees 100% bounds parity
+  // Master Canvas Scaling
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
     if (isExporting || !containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
-      for (let entry of entries) {
-        setScale(entry.contentRect.width / 1200);
+      for (const entry of entries) {
+        const w = entry.contentRect.width;
+        if (w > 0) setScale(w / 1200);
       }
     });
     observer.observe(containerRef.current);
@@ -207,7 +208,7 @@ export const PageRenderer: React.FC<PageRendererProps> = ({
                   return (
                     <div
                       key={slot.id}
-                      className={`group hover:z-10 transition-colors ring-2 ${slot.className || ''} ${isRounded ? 'rounded-full' : ''} ${readOnly ? 'ring-transparent' : (isSlotSelected ? 'ring-blue-500 z-10' : 'ring-transparent hover:ring-blue-300 z-0')}`}
+                      className={`group relative hover:z-10 transition-colors ring-2 ${slot.className || ''} ${isRounded ? 'rounded-full' : ''} ${readOnly ? 'ring-transparent' : (isSlotSelected ? 'ring-blue-500 z-10' : 'ring-transparent hover:ring-blue-300 z-0')}`}
                       onDrop={(e) => handleDrop(e, slot.id)}
                       onDragOver={handleDragOver}
                       onClick={(e) => !readOnly && e.stopPropagation()}
@@ -284,11 +285,11 @@ export const PageRenderer: React.FC<PageRendererProps> = ({
                       ) : (
                         // Empty slot state
                         !readOnly && (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                          <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" style={{ transform: `scale(${invScale})` }}>
                             <div className="bg-blue-500 text-white p-2 rounded-full shadow-lg transform -translate-y-2 group-hover:translate-y-0 transition-all">
-                              <Icons.Upload size={18} />
+                              <Icons.Upload size={13} />
                             </div>
-                            <span className="text-xs font-semibold text-blue-600 mt-2 bg-white/90 px-2 py-0.5 rounded shadow-sm">
+                            <span className="text-xs font-semibold text-blue-600 mt-2 bg-white/90 px-3 py-1 rounded-md shadow-sm">
                               Перетащите фото
                             </span>
                           </div>
@@ -379,28 +380,37 @@ export const PageRenderer: React.FC<PageRendererProps> = ({
     );
   };
 
+  const pageBg = pageData.type === 'flyleaf'
+    ? undefined
+    : (pageData.backgroundColor || theme?.colors?.background || undefined);
+
   return (
     <div
       ref={containerRef}
       onClick={!readOnly ? onSelect : undefined}
-      className={`relative w-full h-full shadow-sm transition-all duration-200 overflow-hidden bg-white
+      className={`relative w-full shadow-sm transition-all duration-200 bg-white
         ${readOnly ? '' : (isSelected ? 'ring-2 ring-blue-500 ring-offset-4 ring-offset-gray-100' : 'hover:ring-2 hover:ring-gray-300 hover:ring-offset-2 hover:ring-offset-gray-100')}
       `}
-      style={{
-        aspectRatio: '1 / 1.414',
-        backgroundColor: pageData.backgroundColor || theme?.colors?.background || '#ffffff',
-      }}
+      style={pageBg ? { backgroundColor: pageBg } : undefined}
     >
-      {/* 1200px Absolute Master Canvas */}
-      <div
-        className="absolute top-0 left-0 origin-top-left"
-        style={{
-          width: '1200px',
-          height: '1696.8px', // 1200 * 1.414
-          transform: isExporting ? 'none' : `scale(${scale})`
-        }}
-      >
+      {/* Intrinsic Aspect Ratio spacer (1697.6 / 1200 = 141.4666%) */}
+      <div style={{ paddingBottom: '141.4666%' }} />
+
+      {/* Actual Content Wrapper */}
+      <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
+        {/* 1200 × 1697.6 Absolute Master Canvas — 0.2% overscale guarantees full coverage */}
+        <div
+          className="absolute top-0 left-0 origin-top-left"
+          style={{
+            width: '1200px',
+            height: '1697.6px',
+            transform: isExporting ? 'none' : `scale(${scale * 1.002})`,
+          }}
+        >
+          {/* Page background — rendered INSIDE canvas so it scales with content */}
+        {pageBg && <div className="absolute inset-0" style={{ backgroundColor: pageBg }} />}
         {pageData.type === 'flyleaf' ? renderFlyleaf() : renderStandardPage()}
+        </div>
       </div>
 
       {/* Page Side Indicator - bottom so it doesn't go under navbar */}

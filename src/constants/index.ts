@@ -14,6 +14,7 @@ export const LAYOUTS: LayoutTemplate[] = [
       { id: 's1', type: SlotType.IMAGE, className: 'row-span-1 col-span-1' }
     ]
   },
+
   {
     id: 'circle_center',
     name: 'Круг по центру',

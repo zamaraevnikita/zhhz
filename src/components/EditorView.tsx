@@ -298,14 +298,12 @@ export const EditorView: React.FC = () => {
                                     {!isCover && (
                                         <div
                                             className={`shrink-0 w-[85vw] sm:w-[65vw] md:w-[50vw] lg:w-[40vh] xl:w-[48vh] 2xl:w-[56vh] bg-white relative border-b lg:border-b-0 lg:border-r border-gray-100 cursor-pointer ${!isPreview && editor.activePageSide === 'left' ? 'ring-2 ring-blue-400 z-10' : 'z-0'}`}
-                                            style={{ aspectRatio: '1 / 1.414' }}
                                         >
                                             <PageRenderer pageData={currentSpread.leftPage} isSelected={!isPreview && editor.activePageSide === 'left'} onSelect={() => { editor.setActivePageSide('left'); editor.setSelectedSlot(null); }} selectedSlotId={editor.selectedSlot?.side === 'left' ? editor.selectedSlot.id : null} onSelectSlot={(id, type) => { editor.setSelectedSlot({ id, side: 'left', type }); editor.setActivePageSide('left'); if (type === SlotType.TEXT) editor.setActiveTab('text'); }} onUpdateContent={(slotId, content) => editor.updatePageContent('left', slotId, content)} onUpdateSettings={(slotId, settings) => editor.updatePageSettings('left', slotId, settings)} theme={currentTheme} customLayouts={availableLayouts} getImageDimsByUrl={images.getImageDimsByUrl} readOnly={isPreview} />
                                         </div>
                                     )}
                                     <div
                                         className={`shrink-0 w-[85vw] sm:w-[65vw] md:w-[50vw] lg:w-[40vh] xl:w-[48vh] 2xl:w-[56vh] bg-white relative cursor-pointer ${!isPreview && editor.activePageSide === 'right' ? 'ring-2 ring-blue-400 z-10' : 'z-0'}`}
-                                        style={{ aspectRatio: '1 / 1.414' }}
                                     >
                                         <PageRenderer pageData={currentSpread.rightPage} isSelected={!isPreview && editor.activePageSide === 'right'} onSelect={() => { editor.setActivePageSide('right'); editor.setSelectedSlot(null); }} selectedSlotId={editor.selectedSlot?.side === 'right' ? editor.selectedSlot.id : null} onSelectSlot={(id, type) => { editor.setSelectedSlot({ id, side: 'right', type }); editor.setActivePageSide('right'); if (type === SlotType.TEXT) editor.setActiveTab('text'); }} onUpdateContent={(slotId, content) => editor.updatePageContent('right', slotId, content)} onUpdateSettings={(slotId, settings) => editor.updatePageSettings('right', slotId, settings)} theme={currentTheme} customLayouts={availableLayouts} getImageDimsByUrl={images.getImageDimsByUrl} readOnly={isPreview} />
                                     </div>

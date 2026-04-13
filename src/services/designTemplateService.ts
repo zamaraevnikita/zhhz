@@ -39,12 +39,18 @@ export const applyDesignTemplate = (
         const rightLayout = layouts.find(l => l.id === rightPreset.layoutId);
 
         const newLeftPage: PageData = leftLayout ? {
+            id: s.leftPage.id,
+            layoutId: leftLayout.id,
+            type: s.leftPage.type,
             ...buildPageFromLayout(leftLayout),
             backgroundColor: leftPreset.backgroundColor || '#ffffff',
             // textDefaults можно тоже сливать сюда, если мы их поддерживаем в PageData
-        } : (s.leftPage || { layoutId: '', content: {}, slotSettings: {}, backgroundColor: '#ffffff' });
+        } : s.leftPage;
 
         const newRightPage: PageData = rightLayout ? {
+            id: s.rightPage.id,
+            layoutId: rightLayout.id,
+            type: s.rightPage.type,
             ...buildPageFromLayout(rightLayout),
             backgroundColor: rightPreset.backgroundColor || '#ffffff'
         } : s.rightPage;
@@ -54,7 +60,7 @@ export const applyDesignTemplate = (
 
     // 3. Отдаем на раскидывание фоток (автозаполнение)
     // Приоритет отдаем фоткам, которые мы только что извлекли
-    const imagesToFill = currentPhotos.map((url, i) => ({ id: `preserved-${i}`, url, width: 800, height: 800 }));
+    const imagesToFill = currentPhotos.map((url, i) => ({ id: `preserved-${i}`, url, width: 800, height: 800, usedCount: 0 }));
 
     if (imagesToFill.length > 0) {
         return autoFillSpreads(newSpreads, imagesToFill, layouts);

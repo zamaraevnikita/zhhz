@@ -146,9 +146,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             const cat = internalSelectedLayoutCategory || 'all';
                                             if (cat === 'all') return true;
                                             return l.tags?.includes(cat);
-                                        }).map((layout) => (
-                                            <button key={layout.id} onClick={() => { onLayoutSelect(layout.id); if (window.innerWidth < 1024) setIsPanelOpen(false); }} className="flex flex-col gap-0.5 lg:gap-1 group"><div className="w-full aspect-[210/297] max-h-[220px] sm:max-h-[260px] lg:max-h-none border border-gray-200 bg-white shadow-sm rounded-sm p-1.5 lg:p-2 group-hover:border-blue-400 transition-all relative overflow-hidden">{layout.isCustom ? (<div className="relative w-full h-full">{layout.slots.map(s => <div key={s.id} className="absolute bg-gray-200" style={{ left: `${s.rect?.x}%`, top: `${s.rect?.y}%`, width: `${s.rect?.w}%`, height: `${s.rect?.h}%`, transform: `rotate(${s.rotation || 0}deg)` }} />)}</div>) : (<div className={`w-full h-full grid ${layout.gridConfig} gap-1`}>{layout.slots.map((slot, i) => <div key={i} className={`bg-gray-100 ${slot.className}`} style={{ borderRadius: slot.className.includes('rounded') ? '50%' : '0' }} />)}</div>)}</div></button>
-                                        ))}
+                                        }).map((layout) => {
+                                            // Strip padding/gap from gridConfig for thumbnail preview
+                                            const thumbnailGrid = (layout.gridConfig || '')
+                                                .split(' ')
+                                                .filter(cls => !/^(p|px|py|pt|pb|pl|pr|gap)-/.test(cls))
+                                                .join(' ');
+                                            return (
+                                            <button key={layout.id} onClick={() => { onLayoutSelect(layout.id); if (window.innerWidth < 1024) setIsPanelOpen(false); }} className="flex flex-col gap-0.5 lg:gap-1 group"><div className="w-full aspect-[210/297] max-h-[220px] sm:max-h-[260px] lg:max-h-none border border-gray-200 bg-white shadow-sm rounded-sm p-1.5 lg:p-2 group-hover:border-blue-400 transition-all relative overflow-hidden">{layout.isCustom ? (<div className="relative w-full h-full">{layout.slots.map(s => <div key={s.id} className="absolute bg-gray-200" style={{ left: `${s.rect?.x}%`, top: `${s.rect?.y}%`, width: `${s.rect?.w}%`, height: `${s.rect?.h}%`, transform: `rotate(${s.rotation || 0}deg)` }} />)}</div>) : (<div className={`w-full h-full grid ${thumbnailGrid} gap-1`}>{layout.slots.map((slot, i) => <div key={i} className={`bg-gray-100 ${slot.className}`} style={{ borderRadius: slot.className.includes('rounded') ? '50%' : '0' }} />)}</div>)}</div></button>
+                                            );
+                                        })}
                                         {layouts.filter(l => {
                                             const cat = internalSelectedLayoutCategory || 'all';
                                             if (cat === 'all') return true;

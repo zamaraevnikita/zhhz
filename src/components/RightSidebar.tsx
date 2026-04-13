@@ -136,7 +136,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                     <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Страницы</span>
                     {onClose && (
                         <button onClick={onClose} className="ml-auto p-1 hover:bg-gray-100 rounded-full lg:hidden">
-                            <Icons.X size={16} />
+                            <Icons.Close size={16} />
                         </button>
                     )}
                 </div>
@@ -169,7 +169,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                                                     : 'hover:ring-1 hover:ring-gray-300'
                                                 }
                                             `}
-                                            style={{ width: '50%', aspectRatio: '1 / 1.414' }}
+                                            style={{ width: '50%' }}
                                         >
                                             <div className="w-full h-full border border-gray-200">
                                                 <PageRenderer 

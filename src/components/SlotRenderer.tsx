@@ -59,6 +59,7 @@ export const SlotRenderer: React.FC<SlotRendererProps> = ({
                             <img
                                 src={content}
                                 alt="Slot Export"
+                                loading="lazy"
                                 className="absolute max-w-none"
                                 style={{
                                     left: `${cropX}%`,
@@ -75,6 +76,7 @@ export const SlotRenderer: React.FC<SlotRendererProps> = ({
                             <img
                                 src={content}
                                 alt="Slot"
+                                loading="lazy"
                                 className={`absolute max-w-none transition-all duration-75 ${fitMode === 'contain' ? 'object-contain p-2 w-full h-full' : ''}`}
                                 style={
                                     fitMode === 'contain'

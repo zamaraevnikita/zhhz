@@ -102,12 +102,13 @@ export const createProject = async (req: Request, res: Response) => {
         const { name, themeId, isCustom, spreads, price, previewUrl } = parseResult.data;
 
         const id = uuidv4();
+        const guestSecret = userId ? null : uuidv4();
         const isCustomInt = isCustom ? 1 : 0;
         const spreadsStr = JSON.stringify(spreads || []);
 
         await run(
-            `INSERT INTO Project (id, userId, name, themeId, isCustom, spreads, price, previewUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id, userId, name, themeId, isCustomInt, spreadsStr, price || null, previewUrl || null]
+            `INSERT INTO Project (id, userId, name, themeId, isCustom, spreads, price, previewUrl, guestSecret) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [id, userId, name, themeId, isCustomInt, spreadsStr, price || null, previewUrl || null, guestSecret]
         );
 
         const project = await get<any>(`SELECT * FROM Project WHERE id = ?`, [id]);
@@ -133,9 +134,17 @@ export const updateProject = async (req: Request, res: Response) => {
         const existing = await get<any>(`SELECT * FROM Project WHERE id = ?`, [id]);
         if (!existing) return res.status(404).json({ error: 'Not found' });
 
-        // Ownership check: only the owner or admin can update
-        if (existing.userId && existing.userId !== userId && role !== 'ADMIN') {
-            return res.status(403).json({ error: 'Forbidden' });
+        // Ownership check: only the owner, guest creator, or admin can update
+        if (role !== 'ADMIN') {
+            if (existing.userId && existing.userId !== userId) {
+                return res.status(403).json({ error: 'Forbidden' });
+            }
+            if (!existing.userId && existing.guestSecret) {
+                const providedSecret = req.headers['x-guest-secret'] || req.body.guestSecret || req.query.guestSecret;
+                if (existing.guestSecret !== providedSecret) {
+                    return res.status(403).json({ error: 'Forbidden: Invalid or missing guest secret' });
+                }
+            }
         }
 
         const parseResult = updateProjectSchema.safeParse(updates);
@@ -181,9 +190,17 @@ export const deleteProject = async (req: Request, res: Response) => {
         const existing = await get<any>(`SELECT * FROM Project WHERE id = ?`, [id]);
         if (!existing) return res.status(404).json({ error: 'Project not found' });
 
-        // Ownership check: only the owner or admin can delete
-        if (existing.userId && existing.userId !== userId && role !== 'ADMIN') {
-            return res.status(403).json({ error: 'Forbidden' });
+        // Ownership check: only the owner, guest creator, or admin can delete
+        if (role !== 'ADMIN') {
+            if (existing.userId && existing.userId !== userId) {
+                return res.status(403).json({ error: 'Forbidden' });
+            }
+            if (!existing.userId && existing.guestSecret) {
+                const providedSecret = req.headers['x-guest-secret'] || req.body.guestSecret || req.query.guestSecret;
+                if (existing.guestSecret !== providedSecret) {
+                    return res.status(403).json({ error: 'Forbidden: Invalid or missing guest secret' });
+                }
+            }
         }
 
         await run(`DELETE FROM Project WHERE id = ?`, [id]);

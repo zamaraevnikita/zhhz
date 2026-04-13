@@ -93,20 +93,46 @@ export const initDb = async () => {
     )
   `);
 
+  await run(`
+    CREATE TABLE IF NOT EXISTS OtpRequest (
+      phone TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      expiresAt INTEGER NOT NULL,
+      attempts INTEGER DEFAULT 0,
+      pendingName TEXT,
+      pendingEmail TEXT,
+      pendingPasswordHash TEXT
+    )
+  `);
+
   console.log('Database tables verified.');
 
   // --- Migrations: safely add new columns if they don't exist ---
-  // SQLite doesn't support IF NOT EXISTS for ALTER TABLE, so we swallow errors.
-  const runMigration = async (sql: string) => {
-    try { await run(sql); } catch (e: any) { /* Column already exists — ignore */ }
+  const ensureColumnExists = async (table: string, column: string, typeDef: string) => {
+    try {
+        const columns = await all<any>(`PRAGMA table_info(\`${table}\`)`);
+        const exists = columns.some(c => c.name === column);
+        if (!exists) {
+            await run(`ALTER TABLE \`${table}\` ADD COLUMN ${column} ${typeDef}`);
+            console.log(`Migration: Added ${column} to ${table}`);
+        }
+    } catch (e) {
+        console.error(`Migration Failed for ${table}.${column}:`, e);
+        throw e;
+    }
   };
 
-  await runMigration(`ALTER TABLE \`Order\` ADD COLUMN customerName TEXT DEFAULT ''`);
-  await runMigration(`ALTER TABLE \`Order\` ADD COLUMN customerPhone TEXT DEFAULT ''`);
-  await runMigration(`ALTER TABLE \`Order\` ADD COLUMN customerEmail TEXT`);
-  await runMigration(`ALTER TABLE Project ADD COLUMN previewUrl TEXT`);
-  await runMigration(`ALTER TABLE User ADD COLUMN email TEXT`);
-  await runMigration(`ALTER TABLE User ADD COLUMN passwordHash TEXT`);
+  await ensureColumnExists('Order', 'customerName', "TEXT DEFAULT ''");
+  await ensureColumnExists('Order', 'customerPhone', "TEXT DEFAULT ''");
+  await ensureColumnExists('Order', 'customerEmail', "TEXT");
+  await ensureColumnExists('Project', 'previewUrl', "TEXT");
+  await ensureColumnExists('Project', 'guestSecret', "TEXT");
+  await ensureColumnExists('User', 'email', "TEXT");
+  await ensureColumnExists('User', 'passwordHash', "TEXT");
+
+  // --- Optimization: Indexes ---
+  await run(`CREATE INDEX IF NOT EXISTS idx_project_userid ON Project(userId)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_order_userid ON \`Order\`(userId)`);
 
   console.log('Migrations applied.');
 };

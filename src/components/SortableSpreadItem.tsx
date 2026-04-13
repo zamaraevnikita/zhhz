@@ -71,7 +71,6 @@ export const SortableSpreadItem: React.FC<SortableSpreadItemProps> = ({
                         : 'hover:ring-1 hover:ring-gray-300'
                     }
         `}
-                style={{ aspectRatio: '1.414 / 1' }}
             >
                 {/* Thumbnail Visuals */}
                 <div className="w-full h-full flex gap-1 bg-gray-50 border border-gray-200">

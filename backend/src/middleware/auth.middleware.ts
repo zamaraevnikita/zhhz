@@ -27,6 +27,17 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
+export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+    // First run the standard authenticate logic
+    authenticate(req, res, () => {
+        const user = (req as AuthenticatedRequest).user;
+        if (!user || user.role !== 'admin') {
+            return res.status(403).json({ error: 'Access denied: Requires admin role' });
+        }
+        next();
+    });
+};
+
 export const optionalAuth = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
 

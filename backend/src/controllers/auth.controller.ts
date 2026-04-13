@@ -11,17 +11,8 @@ if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 
 // ---------------------------------------------------------------------------
 // OTP store (used only during REGISTRATION to verify phone ownership)
+// Now using SQLite OtpRequest table for persistence.
 // ---------------------------------------------------------------------------
-interface OtpEntry {
-    code: string;
-    expiresAt: number;
-    attempts: number;
-    // Pending registration data — saved here until phone is verified
-    pendingName?: string;
-    pendingEmail?: string;
-    pendingPasswordHash?: string;
-}
-const otpStore = new Map<string, OtpEntry>();
 
 const MAX_OTP_ATTEMPTS = 5;
 const OTP_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -55,14 +46,13 @@ export const requestOtp = async (req: Request, res: Response) => {
         pendingPasswordHash = await bcrypt.hash(password, 12);
     }
 
-    otpStore.set(phone, {
-        code: otp,
-        expiresAt: Date.now() + OTP_TTL_MS,
-        attempts: 0,
-        pendingName: name || undefined,
-        pendingEmail: email || undefined,
-        pendingPasswordHash,
-    });
+    await run(
+        `INSERT INTO OtpRequest (phone, code, expiresAt, attempts, pendingName, pendingEmail, pendingPasswordHash)
+         VALUES (?, ?, ?, 0, ?, ?, ?)
+         ON CONFLICT(phone) DO UPDATE SET
+         code=excluded.code, expiresAt=excluded.expiresAt, attempts=0, pendingName=excluded.pendingName, pendingEmail=excluded.pendingEmail, pendingPasswordHash=excluded.pendingPasswordHash`,
+        [phone, otp, Date.now() + OTP_TTL_MS, name || null, email || null, pendingPasswordHash || null]
+    );
 
     // --- SMS Stub / Integration ---
     const isDev = process.env.NODE_ENV !== 'production';
@@ -171,29 +161,30 @@ export const verifyOtp = async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Phone and code are required' });
     }
 
-    const entry = otpStore.get(phone);
+    const entry = await get<any>(`SELECT * FROM OtpRequest WHERE phone = ?`, [phone]);
 
     if (!entry) {
         return res.status(401).json({ error: 'Код не запрашивался для этого номера' });
     }
 
     if (Date.now() > entry.expiresAt) {
-        otpStore.delete(phone);
+        await run(`DELETE FROM OtpRequest WHERE phone = ?`, [phone]);
         return res.status(401).json({ error: 'Код истёк. Запросите новый.' });
     }
 
-    entry.attempts += 1;
-    if (entry.attempts > MAX_OTP_ATTEMPTS) {
-        otpStore.delete(phone);
-        return res.status(429).json({ error: 'Слишком много попыток. Запросите новый код.' });
-    }
-
     if (entry.code !== code) {
-        return res.status(401).json({ error: 'Неверный код' });
+        const newAttempts = entry.attempts + 1;
+        if (newAttempts >= MAX_OTP_ATTEMPTS) {
+            await run(`DELETE FROM OtpRequest WHERE phone = ?`, [phone]);
+            return res.status(429).json({ error: 'Слишком много попыток. Запросите новый код.' });
+        } else {
+            await run(`UPDATE OtpRequest SET attempts = ? WHERE phone = ?`, [newAttempts, phone]);
+            return res.status(401).json({ error: 'Неверный код' });
+        }
     }
 
     // OTP correct — consume it
-    otpStore.delete(phone);
+    await run(`DELETE FROM OtpRequest WHERE phone = ?`, [phone]);
 
     try {
         let user = await get<any>(`SELECT id, phone, name, email, role, passwordHash FROM User WHERE phone = ?`, [phone]);
