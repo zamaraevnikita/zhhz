@@ -35,7 +35,7 @@ export const AdminLayoutSidebar: React.FC<AdminLayoutSidebarProps> = ({
     onClose
 }) => {
     return (
-        <div className="w-72 bg-[#1a1a1a] border-r border-white/5 flex flex-col flex-shrink-0 overflow-hidden">
+        <div className="w-72 bg-zinc-900/50 backdrop-blur-3xl border-r border-white/5 flex flex-col flex-shrink-0 overflow-hidden">
             {/* Header */}
             <div className="p-5 pb-3 flex items-center justify-between flex-shrink-0 border-b border-white/5">
                 <h2 className="text-xs font-black uppercase tracking-widest text-gray-500">Конструктор</h2>
@@ -51,9 +51,9 @@ export const AdminLayoutSidebar: React.FC<AdminLayoutSidebarProps> = ({
             <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-5">
                 {/* Name & Tags */}
                 <div className="space-y-3">
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 flex flex-col items-start w-full">
                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Название</label>
-                        <input className="w-full bg-[#222] border border-white/10 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none" value={editingLayout.name} onChange={(e) => admin.layoutHistory.replace({ ...editingLayout, name: e.target.value })} onBlur={() => admin.layoutHistory.commit()} />
+                        <input className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-xs text-white focus:ring-1 focus:ring-blue-500 outline-none hover:bg-white/10 transition-colors" value={editingLayout.name} onChange={(e) => admin.layoutHistory.replace({ ...editingLayout, name: e.target.value })} onBlur={() => admin.layoutHistory.commit()} />
                     </div>
                     <div className="space-y-1.5 flex flex-col items-start">
                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Категории</label>
@@ -81,8 +81,8 @@ export const AdminLayoutSidebar: React.FC<AdminLayoutSidebarProps> = ({
                                             admin.layoutHistory.commit();
                                         }}
                                         className={`px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-colors border ${isSelected
-                                            ? 'bg-blue-600/20 border-blue-500/30 text-blue-300'
-                                            : 'bg-[#222] border-white/5 text-gray-400 hover:bg-[#2a2a2a]'
+                                            ? 'bg-blue-600/20 border-blue-500/30 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
+                                            : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'
                                             }`}
                                     >
                                         {cat.label}
@@ -110,18 +110,18 @@ export const AdminLayoutSidebar: React.FC<AdminLayoutSidebarProps> = ({
                 <div className="space-y-2">
                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Пресеты</label>
                     <div className="grid grid-cols-2 gap-2">
-                        <button onClick={() => admin.addPreset('full_page')} className="bg-[#222] hover:bg-[#2a2a2a] p-2 rounded-lg text-[9px] font-medium flex flex-col items-center gap-1.5 transition-colors border border-white/5">
+                        <button onClick={() => admin.addPreset('full_page')} className="bg-white/5 hover:bg-white/10 p-2 rounded-lg text-[9px] font-medium flex flex-col items-center gap-1.5 transition-colors border border-white/5">
                             <div className="w-8 h-10 border border-gray-500 rounded-sm bg-gray-700/50"></div>
                             <span className="text-gray-400">Полная</span>
                         </button>
-                        <button onClick={() => admin.addPreset('photo_text')} className="bg-[#222] hover:bg-[#2a2a2a] p-2 rounded-lg text-[9px] font-medium flex flex-col items-center gap-1.5 transition-colors border border-white/5">
+                        <button onClick={() => admin.addPreset('photo_text')} className="bg-white/5 hover:bg-white/10 p-2 rounded-lg text-[9px] font-medium flex flex-col items-center gap-1.5 transition-colors border border-white/5">
                             <div className="w-8 h-10 border border-gray-500 rounded-sm flex flex-col overflow-hidden">
                                 <div className="flex-1 bg-blue-500/20"></div>
                                 <div className="h-3 bg-amber-500/20 flex items-center justify-center"><span className="text-[5px] text-amber-500">T</span></div>
                             </div>
                             <span className="text-gray-400">Фото+Текст</span>
                         </button>
-                        <button onClick={() => admin.addPreset('collage_2x2')} className="bg-[#222] hover:bg-[#2a2a2a] p-2 rounded-lg text-[9px] font-medium flex flex-col items-center gap-1.5 transition-colors border border-white/5">
+                        <button onClick={() => admin.addPreset('collage_2x2')} className="bg-white/5 hover:bg-white/10 p-2 rounded-lg text-[9px] font-medium flex flex-col items-center gap-1.5 transition-colors border border-white/5">
                             <div className="w-8 h-10 border border-gray-500 rounded-sm grid grid-cols-2 grid-rows-2 gap-[1px] p-[1px]">
                                 <div className="bg-blue-500/20 rounded-[1px]"></div>
                                 <div className="bg-blue-500/20 rounded-[1px]"></div>
@@ -130,7 +130,7 @@ export const AdminLayoutSidebar: React.FC<AdminLayoutSidebarProps> = ({
                             </div>
                             <span className="text-gray-400">Коллаж 2×2</span>
                         </button>
-                        <button onClick={() => admin.addPreset('side_by_side')} className="bg-[#222] hover:bg-[#2a2a2a] p-2 rounded-lg text-[9px] font-medium flex flex-col items-center gap-1.5 transition-colors border border-white/5">
+                        <button onClick={() => admin.addPreset('side_by_side')} className="bg-white/5 hover:bg-white/10 p-2 rounded-lg text-[9px] font-medium flex flex-col items-center gap-1.5 transition-colors border border-white/5">
                             <div className="w-8 h-10 border border-gray-500 rounded-sm grid grid-cols-2 gap-[1px] p-[1px]">
                                 <div className="bg-blue-500/20 rounded-[1px]"></div>
                                 <div className="bg-blue-500/20 rounded-[1px]"></div>
@@ -152,8 +152,8 @@ export const AdminLayoutSidebar: React.FC<AdminLayoutSidebarProps> = ({
                                 key={slot.id}
                                 onClick={() => admin.setActiveSlotId(slot.id)}
                                 className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all text-[10px] ${activeSlotId === slot.id
-                                    ? 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
-                                    : 'bg-[#222] border border-white/5 text-gray-400 hover:bg-[#282828]'
+                                    ? 'bg-blue-600/20 border border-blue-500/30 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.15)]'
+                                    : 'bg-white/5 border border-white/5 text-gray-400 hover:bg-white/10'
                                     }`}
                             >
                                 {slot.type === SlotType.IMAGE
@@ -197,7 +197,7 @@ export const AdminLayoutSidebar: React.FC<AdminLayoutSidebarProps> = ({
                         <button
                             type="button"
                             onClick={() => admin.backgroundFileInputRef.current?.click()}
-                            className="flex-1 bg-[#222] hover:bg-[#2a2a2a] text-white p-2.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-2 transition-colors border border-white/5"
+                            className="flex-1 bg-white/5 hover:bg-white/10 text-white p-2.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-2 transition-colors border border-white/5"
                         >
                             <Icons.Image size={13} /> {editingLayout.backgroundImage ? 'Заменить' : 'Загрузить'}
                         </button>
@@ -206,7 +206,7 @@ export const AdminLayoutSidebar: React.FC<AdminLayoutSidebarProps> = ({
                         )}
                     </div>
                     {editingLayout.backgroundImage && (
-                        <div className="rounded-lg overflow-hidden border border-white/10 aspect-video max-h-20 bg-[#222]">
+                        <div className="rounded-lg overflow-hidden border border-white/10 aspect-video max-h-20 bg-white/5 mt-2">
                             <img src={editingLayout.backgroundImage} alt="" className="w-full h-full object-cover" />
                         </div>
                     )}

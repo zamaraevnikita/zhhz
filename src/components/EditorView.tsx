@@ -123,7 +123,7 @@ export const EditorView: React.FC = () => {
     }
 
     return (
-        <div className="flex h-screen w-screen overflow-hidden bg-gray-50 text-gray-800 font-sans">
+        <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-gray-800 font-sans selection:bg-blue-100 selection:text-blue-900">
             {!isPreview && (
                 <>
                     <Sidebar
@@ -174,9 +174,9 @@ export const EditorView: React.FC = () => {
                     {/* Left sidebar toggle — desktop only */}
                     <button
                         onClick={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
-                        className="hidden lg:flex items-center justify-center w-5 h-14 bg-white border border-gray-200 rounded-r-md text-gray-400 hover:text-gray-900 hover:bg-gray-50 shadow-sm transition-colors self-center shrink-0 -ml-px z-10"
+                        className="hidden lg:flex items-center justify-center w-5 h-16 bg-white/60 backdrop-blur-xl border border-white/60 rounded-r-xl shadow-lg hover:shadow-xl hover:bg-white text-gray-400 hover:text-gray-900 transition-all self-center shrink-0 -ml-px z-30"
                     >
-                        {isLeftPanelOpen ? <Icons.ChevronLeft size={13} /> : <Icons.ChevronRight size={13} />}
+                        {isLeftPanelOpen ? <Icons.ChevronLeft size={14} strokeWidth={2.5} /> : <Icons.ChevronRight size={14} strokeWidth={2.5} />}
                     </button>
                 </>
             )}
@@ -184,7 +184,7 @@ export const EditorView: React.FC = () => {
             {/* MAIN COLUMN */}
             <div className="flex-1 flex flex-col h-full relative min-w-0">
                 {/* ─── HEADER ─── */}
-                <header className="h-12 sm:h-14 bg-white border-b border-gray-200 flex items-center px-3 sm:px-5 gap-2 z-20 flex-shrink-0">
+                <header className="h-14 sm:h-16 bg-white/80 backdrop-blur-2xl border-b border-black/5 flex items-center px-3 sm:px-6 gap-2 z-20 flex-shrink-0 shadow-[0_4px_30px_rgba(0,0,0,0.03)]">
                     {/* Left: back */}
                     <button onClick={() => navigate('/')} className="flex items-center gap-1.5 text-gray-400 hover:text-gray-900 transition-colors shrink-0 mr-1">
                         <Icons.Back size={18} />
@@ -261,15 +261,15 @@ export const EditorView: React.FC = () => {
                 </header>
 
                 {/* ─── CANVAS WORKSPACE ─── */}
-                <div className="flex-1 relative bg-[#F3F4F6] overflow-hidden flex flex-col">
+                <div className="flex-1 relative bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden flex flex-col">
                     {/* Floating toolbar: undo/redo + mobile pages */}
-                    <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
-                        <div className="flex gap-1.5 pointer-events-auto">
-                            <button onClick={editor.spreadsHistory.undo} disabled={!editor.spreadsHistory.canUndo} className="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 shadow-sm rounded-lg disabled:opacity-30 hover:bg-gray-50 transition-colors">
-                                <Icons.Undo size={14} />
+                    <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
+                        <div className="flex gap-2 pointer-events-auto">
+                            <button onClick={editor.spreadsHistory.undo} disabled={!editor.spreadsHistory.canUndo} className="w-10 h-10 flex items-center justify-center bg-white/90 backdrop-blur-md border border-white/50 shadow-lg rounded-xl disabled:opacity-40 hover:bg-white hover:scale-105 active:scale-95 transition-all text-gray-600">
+                                <Icons.Undo size={16} />
                             </button>
-                            <button onClick={editor.spreadsHistory.redo} disabled={!editor.spreadsHistory.canRedo} className="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 shadow-sm rounded-lg disabled:opacity-30 hover:bg-gray-50 transition-colors">
-                                <Icons.Redo size={14} />
+                            <button onClick={editor.spreadsHistory.redo} disabled={!editor.spreadsHistory.canRedo} className="w-10 h-10 flex items-center justify-center bg-white/90 backdrop-blur-md border border-white/50 shadow-lg rounded-xl disabled:opacity-40 hover:bg-white hover:scale-105 active:scale-95 transition-all text-gray-600">
+                                <Icons.Redo size={16} />
                             </button>
                         </div>
                         {!isPreview && (
@@ -287,14 +287,14 @@ export const EditorView: React.FC = () => {
                             <button
                                 onClick={() => editor.setCurrentSpreadIndex(Math.max(0, editor.currentSpreadIndex - 1))}
                                 disabled={editor.currentSpreadIndex === 0}
-                                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center bg-white/80 hover:bg-white border border-gray-200 shadow-sm rounded-full disabled:opacity-20 transition-all shrink-0"
+                                className="w-10 h-10 flex items-center justify-center bg-white/80 backdrop-blur-md hover:bg-white hover:scale-105 active:scale-95 border border-white/60 shadow-xl rounded-full disabled:opacity-30 disabled:hover:scale-100 transition-all shrink-0 text-gray-500"
                             >
-                                <Icons.ChevronLeft size={16} />
+                                <Icons.ChevronLeft size={18} strokeWidth={2.5} />
                             </button>
 
                             {/* Pages */}
                             <div className="flex flex-col items-center">
-                                <div className={`flex flex-col lg:flex-row shadow-xl relative w-fit mx-auto rounded-sm overflow-hidden transition-transform duration-500 ${isPreview ? 'scale-[1.02]' : 'scale-100'}`}>
+                                <div className={`flex flex-col lg:flex-row shadow-2xl shadow-black/10 ring-1 ring-black/5 relative w-fit mx-auto rounded-sm overflow-hidden transition-transform duration-500 ${isPreview ? 'scale-[1.03]' : 'scale-100'}`}>
                                     {!isCover && (
                                         <div
                                             className={`shrink-0 w-[85vw] sm:w-[65vw] md:w-[50vw] lg:w-[40vh] xl:w-[48vh] 2xl:w-[56vh] bg-white relative border-b lg:border-b-0 lg:border-r border-gray-100 cursor-pointer ${!isPreview && editor.activePageSide === 'left' ? 'ring-2 ring-blue-400 z-10' : 'z-0'}`}
@@ -326,9 +326,9 @@ export const EditorView: React.FC = () => {
                             <button
                                 onClick={() => editor.setCurrentSpreadIndex(Math.min(editor.spreads.length - 1, editor.currentSpreadIndex + 1))}
                                 disabled={editor.currentSpreadIndex >= editor.spreads.length - 1}
-                                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center bg-white/80 hover:bg-white border border-gray-200 shadow-sm rounded-full disabled:opacity-20 transition-all shrink-0"
+                                className="w-10 h-10 flex items-center justify-center bg-white/80 backdrop-blur-md hover:bg-white hover:scale-105 active:scale-95 border border-white/60 shadow-xl rounded-full disabled:opacity-30 disabled:hover:scale-100 transition-all shrink-0 text-gray-500"
                             >
-                                <Icons.ChevronRight size={16} />
+                                <Icons.ChevronRight size={18} strokeWidth={2.5} />
                             </button>
                         </div>
                     </div>
@@ -342,9 +342,9 @@ export const EditorView: React.FC = () => {
                         {/* Desktop toggle — always visible, sits outside the panel */}
                         <button
                             onClick={() => editor.setIsRightPanelOpen(!editor.isRightPanelOpen)}
-                            className="hidden lg:flex items-center justify-center w-5 h-14 bg-white border border-gray-200 rounded-l-md text-gray-400 hover:text-gray-900 hover:bg-gray-50 shadow-sm transition-colors self-center shrink-0 -mr-px z-10"
+                            className="hidden lg:flex flex-col gap-1 items-center justify-center w-6 h-16 bg-white/60 backdrop-blur-xl border border-white/60 rounded-l-xl shadow-lg hover:shadow-xl hover:bg-white text-gray-400 hover:text-gray-900 transition-all self-center shrink-0 -mr-px z-30"
                         >
-                            {editor.isRightPanelOpen ? <Icons.ChevronRight size={13} /> : <Icons.ChevronLeft size={13} />}
+                            {editor.isRightPanelOpen ? <Icons.ChevronRight size={14} strokeWidth={2.5} /> : <Icons.ChevronLeft size={14} strokeWidth={2.5} />}
                         </button>
 
                         {/* Panel wrapper */}

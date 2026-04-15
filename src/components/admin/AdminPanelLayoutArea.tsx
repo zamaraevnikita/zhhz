@@ -25,13 +25,13 @@ export const AdminPanelLayoutArea: React.FC<AdminPanelLayoutAreaProps> = ({
 }) => {
     return (
         <div
-            className="flex-1 bg-[#0a0a0a] relative overflow-hidden flex flex-col"
+            className="flex-1 bg-zinc-950/20 relative overflow-hidden flex flex-col"
             onClick={(e) => {
                 if (!(e.target as HTMLElement).closest('[data-slot-id]')) admin.setActiveSlotId(null);
             }}
         >
             {/* Top Toolbar */}
-            <div className="flex items-center gap-1 px-4 py-2 bg-[#151515] border-b border-white/5 flex-shrink-0 z-10">
+            <div className="flex items-center gap-1 px-4 py-2 bg-zinc-900/40 backdrop-blur-3xl border-b border-white/5 flex-shrink-0 z-10">
                 {/* Zoom */}
                 <div className="flex items-center gap-1 pr-3 border-r border-white/10">
                     {[50, 75, 100].map(z => (
@@ -236,7 +236,7 @@ export const AdminPanelLayoutArea: React.FC<AdminPanelLayoutAreaProps> = ({
             </div>
 
             {/* Status Bar */}
-            <div className="flex items-center px-4 py-1.5 bg-[#151515] border-t border-white/5 text-[9px] text-gray-600 gap-4 flex-shrink-0">
+            <div className="flex items-center px-4 py-1.5 bg-zinc-900/40 backdrop-blur-3xl border-t border-white/5 text-[9px] text-gray-600 gap-4 flex-shrink-0 z-10">
                 <span>{editingLayout.slots.length} слотов</span>
                 <span>{admin.CANVAS_W}×{admin.CANVAS_H} px</span>
                 <span>Масштаб: {admin.zoom}%</span>

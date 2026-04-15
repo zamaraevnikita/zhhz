@@ -130,7 +130,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             onDragCancel={handleDragCancel}
             modifiers={[restrictToWindowEdges]}
         >
-            <div className="w-full bg-white flex flex-col h-full flex-shrink-0 overflow-hidden relative">
+            <div className="w-full bg-white/70 backdrop-blur-3xl flex flex-col h-full flex-shrink-0 overflow-hidden relative border-l border-white/50">
                 {/* Header */}
                 <div className="flex items-center px-3 py-2.5 border-b border-gray-100 flex-shrink-0">
                     <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Страницы</span>
@@ -218,7 +218,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                         <div className="pt-2">
                             <button
                                 onClick={onAddPages}
-                                className="w-full h-16 border border-dashed border-gray-300 rounded-sm flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-gray-500 hover:text-gray-600 hover:bg-gray-50 transition-all font-medium text-xs sm:text-sm"
+                                className="w-full h-16 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-black hover:text-black hover:bg-white/50 transition-all font-bold text-[10px] uppercase tracking-wider"
                             >
                                 <Icons.Plus size={20} />
                                 <span>Добавить разворот</span>
@@ -228,7 +228,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                 </div>
 
                 {/* Bottom Action */}
-                <div className="px-3 py-3 border-t border-gray-100 bg-white flex-shrink-0">
+                <div className="px-3 py-3 border-t border-black/5 bg-transparent flex-shrink-0">
                     <button
                         onClick={onClearAll}
                         className="w-full py-2 bg-[#FFEDEF] hover:bg-[#ffe0e3] text-gray-700 text-[11px] font-medium rounded-lg transition-colors"

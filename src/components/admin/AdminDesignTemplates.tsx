@@ -54,7 +54,7 @@ export const AdminDesignTemplates: React.FC = () => {
     }
 
     return (
-        <div className="flex-1 overflow-auto bg-[#141414] p-6 lg:p-10 font-sans">
+        <div className="flex-1 overflow-auto bg-transparent p-6 lg:p-10 font-sans">
             <div className="max-w-6xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
                     <div>
@@ -75,8 +75,8 @@ export const AdminDesignTemplates: React.FC = () => {
                         <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                     </div>
                 ) : templates.length === 0 ? (
-                    <div className="text-center py-20 bg-[#1a1a1a] rounded-2xl border border-white/5">
-                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-500">
+                    <div className="text-center py-20 bg-white/5 backdrop-blur-2xl rounded-2xl border border-white/10">
+                        <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-500">
                             <Icons.Grid size={24} />
                         </div>
                         <h3 className="text-lg font-bold text-white mb-2">Шаблонов пока нет</h3>
@@ -87,8 +87,8 @@ export const AdminDesignTemplates: React.FC = () => {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {templates.map(tmpl => (
-                            <div key={tmpl.id} className="bg-[#1a1a1a] rounded-2xl border border-white/5 overflow-hidden group hover:border-white/20 transition-all flex flex-col">
-                                <div className="aspect-[3/4] relative bg-[#222] overflow-hidden">
+                            <div key={tmpl.id} className="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 overflow-hidden group hover:border-white/30 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)] transition-all flex flex-col">
+                                <div className="aspect-[3/4] relative bg-black/40 overflow-hidden">
                                     {tmpl.previewUrl ? (
                                         <img src={tmpl.previewUrl} alt={tmpl.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                                     ) : (

@@ -1,18 +1,40 @@
-import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import React, { Suspense, lazy, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 
-const ThemeSelection = lazy(() => import('./components/ThemeSelection').then(m => ({ default: m.ThemeSelection })));
-const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
+const ProductPage = lazy(() => import('./pages/ProductPage').then(m => ({ default: m.default })));
+const MyProjectsPage = lazy(() => import('./pages/MyProjectsPage').then(m => ({ default: m.default })));
 const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
-const CartView = lazy(() => import('./components/CartView').then(m => ({ default: m.CartView })));
+const CartPage = lazy(() => import('./pages/CartPage').then(m => ({ default: m.default })));
 const EditorView = lazy(() => import('./components/EditorView').then(m => ({ default: m.EditorView })));
 const MainPage = lazy(() => import('./components/MainPage').then(m => ({ default: m.MainPage })));
 import { Icons } from './components/IconComponents';
+
+// New Static Pages
+import AboutPage from './pages/AboutPage';
+import DesignerServicePage from './pages/DesignerServicePage';
 
 // Hooks
 import { useProjects } from './hooks/useProjects';
 import { useAuth } from './context/AuthContext';
 import { useLayouts } from './hooks/useLayouts';
+
+const ScrollToHash: React.FC = () => {
+  const { hash, pathname } = useLocation();
+
+  useEffect(() => {
+    if (hash) {
+      const timer = setTimeout(() => {
+        const el = document.querySelector(hash);
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [hash, pathname]);
+
+  return null;
+};
 
 const App: React.FC = () => {
   const projects = useProjects();
@@ -22,25 +44,25 @@ const App: React.FC = () => {
 
   return (
     <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center font-bold text-xl uppercase tracking-widest text-[#CCCCCC]">Загрузка...</div>}>
+      <ScrollToHash />
       <Routes>
       <Route path="/" element={<MainPage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/designer-service" element={<DesignerServicePage />} />
       <Route path="/projects" element={
-        <Dashboard
+        <MyProjectsPage
           projects={projects.projects}
-          activeProjectId={projects.activeProjectId}
-          onNewProject={() => navigate('/theme-selection')}
+          onNewProject={() => navigate('/product')}
           onProjectSelect={(id) => navigate(`/editor/${id}`)}
           onDeleteProject={(id) => {
             if (window.confirm('Вы уверены, что хотите удалить этот проект?')) {
               projects.deleteProject(id);
             }
           }}
-          onViewCart={() => navigate('/cart')}
-          onAdminPanel={() => navigate('/admin')}
         />
       } />
-      <Route path="/theme-selection" element={
-        <ThemeSelection
+      <Route path="/product/:id?" element={
+        <ProductPage
           onSelectTheme={async (theme) => {
             try {
               const { project } = await projects.startNewProject(theme);
@@ -50,12 +72,11 @@ const App: React.FC = () => {
               alert('Ошибка при создании проекта');
             }
           }}
-          onBack={() => navigate('/')}
         />
       } />
       <Route path="/editor/:projectId" element={<EditorView />} />
       <Route path="/cart" element={
-        <CartView
+        <CartPage
           projects={projects.projects}
           onBack={() => navigate(-1)}
         />

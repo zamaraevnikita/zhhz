@@ -1,29 +1,22 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Navbar } from './landing/Navbar';
+import Hero from './landing/Hero';
+import Catalog from './landing/Catalog';
+import Topics from './landing/Topics';
+import HowItWorks from './landing/HowItWorks';
+import Designer from './landing/Designer';
+import Reviews from './landing/Reviews';
+import Footer from './landing/Footer';
 
-/**
- * MainPage — пока только Navbar для поочерёдной проверки.
- * Секции будут добавляться по одной после проверки.
- */
 export const MainPage: React.FC = () => {
-    const navigate = useNavigate();
-
-    const handleNavigate = (path: string) => {
-        if (path.startsWith('#')) return;
-        navigate(path);
-    };
-
     return (
-        <div className="min-h-screen bg-white">
-            <Navbar onNavigate={handleNavigate} />
-
-            {/* Временный контент чтобы видеть навбар */}
-            <div className="pt-[67px] flex items-center justify-center" style={{ height: '100vh' }}>
-                <p className="text-gray-300 text-sm" style={{ fontFamily: 'Helvetica, sans-serif' }}>
-                    Секции будут добавляться поочерёдно
-                </p>
-            </div>
+        <div className="landing-page main flex flex-col min-h-screen bg-white">
+            <Hero />
+            <Catalog />
+            <Topics />
+            <HowItWorks />
+            <Designer />
+            <Reviews />
+            <Footer />
         </div>
     );
 };

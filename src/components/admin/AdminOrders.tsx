@@ -36,12 +36,12 @@ export const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, setExportProje
     };
 
     return (
-        <div className="flex-1 bg-[#0a0a0a] overflow-y-auto custom-scrollbar p-6">
+        <div className="flex-1 bg-transparent overflow-y-auto custom-scrollbar p-6">
             <div className="max-w-6xl mx-auto">
                 <h2 className="text-2xl font-bold text-white mb-6">Журнал заказов</h2>
 
                 {orders.length === 0 ? (
-                    <div className="bg-[#1a1a1a] border border-white/5 rounded-2xl p-12 text-center flex flex-col items-center">
+                    <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl p-12 text-center flex flex-col items-center">
                         <ShoppingCart size={48} className="text-gray-600 mb-4" />
                         <h3 className="text-lg font-bold text-gray-300">Пока нет заказов</h3>
                         <p className="text-gray-500 mt-2">Когда пользователи оформят покупку в корзине, заказы появятся здесь.</p>
@@ -55,7 +55,7 @@ export const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, setExportProje
                                 : new Date(order.createdAt as any);
 
                             return (
-                                <div key={order.id} className="bg-[#1a1a1a] border border-white/10 rounded-xl overflow-hidden hover:border-white/20 transition-colors shadow-lg">
+                                <div key={order.id} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden hover:border-white/30 transition-colors shadow-2xl">
                                     {/* Order Header */}
                                     <div className="p-5 border-b border-white/10 bg-white/[0.02] flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
                                         <div>
@@ -97,7 +97,7 @@ export const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, setExportProje
                                                 const itemKey = `${order.id}-${idx}`;
 
                                                 return (
-                                                    <div key={idx} className="flex gap-4 p-4 bg-[#222] rounded-lg border border-white/5 items-center">
+                                                    <div key={idx} className="flex gap-4 p-4 bg-white/5 rounded-lg border border-white/10 items-center">
                                                         <div className="w-16 h-20 bg-[#111] rounded border border-white/10 overflow-hidden shrink-0 flex items-center justify-center">
                                                             {previewUrl
                                                                 ? <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />

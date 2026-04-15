@@ -75,7 +75,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ layouts, onSaveLayout, o
     }, [admin, activeSlot, activeSlotId, adminTab]);
 
     return (
-        <div className="fixed inset-0 bg-[#111] z-50 flex flex-col text-gray-100 font-sans overflow-hidden">
+        <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col text-gray-100 font-sans overflow-hidden">
             <AdminTopBar adminTab={adminTab} setAdminTab={setAdminTab} onClose={onClose} />
 
             {/* Main Content Area */}

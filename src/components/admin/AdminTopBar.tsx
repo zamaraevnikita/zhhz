@@ -10,7 +10,7 @@ interface AdminTopBarProps {
 
 export const AdminTopBar: React.FC<AdminTopBarProps> = ({ adminTab, setAdminTab, onClose }) => {
     return (
-        <div className="h-14 bg-[#1a1a1a] border-b border-white/10 flex items-center justify-between px-4 sm:px-6 shrink-0 z-50 shadow-sm relative">
+        <div className="h-16 bg-zinc-900/60 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between px-4 sm:px-6 shrink-0 z-50 shadow-[0_4px_30px_rgba(0,0,0,0.5)] relative">
             <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">

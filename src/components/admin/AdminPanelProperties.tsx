@@ -47,8 +47,7 @@ const NumericInput = ({
                 value={localValue}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                className={`w-full font-mono text-[11px] bg-gray-700 px-2 py-1.5 rounded border border-gray-600 focus:ring-1 focus:ring-blue-500 outline-none ${className}`}
+                className={`w-full font-mono text-[11px] bg-white/10 px-2 py-1.5 rounded border border-white/10 focus:ring-1 focus:ring-blue-500 outline-none ${className}`}
                 min={min}
                 max={max}
                 step={step}
@@ -69,7 +68,7 @@ export const AdminPanelProperties: React.FC<AdminPanelPropertiesProps> = ({ acti
 
     return (
         <div className={`
-            fixed top-0 right-0 bottom-0 w-80 bg-[#1a1a1a] border-l border-white/5 transition-transform duration-300 z-40
+            fixed top-0 right-0 bottom-0 w-80 bg-zinc-900/50 backdrop-blur-3xl border-l border-white/5 transition-transform duration-300 z-40
             ${activeSlot ? 'translate-x-0' : 'translate-x-full'}
         `}>
             {activeSlot && (
@@ -107,10 +106,10 @@ export const AdminPanelProperties: React.FC<AdminPanelPropertiesProps> = ({ acti
                                     <div className="space-y-1"><span className="text-[9px] text-gray-500 ml-1">Высота (%)</span><NumericInput value={activeSlot.rect!.h} onChange={val => admin.updateSlot(activeSlot.id, { rect: { ...activeSlot.rect!, h: val } })} min={1} max={100} step={0.5} suffix="%" /></div>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button onClick={() => admin.centerSlot()} className="flex-1 p-2 bg-[#222] hover:bg-[#2a2a2a] rounded-lg text-[9px] flex items-center justify-center gap-1.5 border border-white/5 transition-colors text-gray-400">
+                                    <button onClick={() => admin.centerSlot()} className="flex-1 p-2 bg-white/5 hover:bg-white/10 rounded-lg text-[9px] flex items-center justify-center gap-1.5 border border-white/5 transition-colors text-gray-400">
                                         <Move size={10} /> Центр
                                     </button>
-                                    <button onClick={() => admin.resetSlotToFull()} className="flex-1 p-2 bg-[#222] hover:bg-[#2a2a2a] rounded-lg text-[9px] flex items-center justify-center gap-1.5 border border-white/5 transition-colors text-gray-400">
+                                    <button onClick={() => admin.resetSlotToFull()} className="flex-1 p-2 bg-white/5 hover:bg-white/10 rounded-lg text-[9px] flex items-center justify-center gap-1.5 border border-white/5 transition-colors text-gray-400">
                                         <Maximize2 size={10} /> На всю страницу
                                     </button>
                                 </div>
@@ -123,7 +122,7 @@ export const AdminPanelProperties: React.FC<AdminPanelPropertiesProps> = ({ acti
                                 </div>
                                 <button
                                     onClick={admin.convertToCustomLayout}
-                                    className="w-full bg-[#222] hover:bg-[#2a2a2a] p-2.5 rounded-lg text-[10px] font-bold border border-white/5 transition-colors flex items-center justify-center gap-2"
+                                    className="w-full bg-white/5 hover:bg-white/10 p-2.5 rounded-lg text-[10px] font-bold border border-white/5 transition-colors flex items-center justify-center gap-2"
                                 >
                                     <Unlock size={12} />
                                     Отвязать от сетки
@@ -141,9 +140,9 @@ export const AdminPanelProperties: React.FC<AdminPanelPropertiesProps> = ({ acti
                                 </div>
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-[9px] text-gray-500 px-1"><span>Прозрачность</span><span>{Math.round((activeSlot.opacity || 1) * 100)}%</span></div>
-                                    <input type="range" min="0" max="1" step="0.01" value={activeSlot.opacity ?? 1} onChange={e => admin.updateSlot(activeSlot.id, { opacity: Number(e.target.value) })} className="w-full accent-blue-500 h-1 bg-[#333] rounded-lg appearance-none cursor-pointer" />
+                                    <input type="range" min="0" max="1" step="0.01" value={activeSlot.opacity ?? 1} onChange={e => admin.updateSlot(activeSlot.id, { opacity: Number(e.target.value) })} className="w-full accent-blue-500 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer" />
                                 </div>
-                                <div className="flex justify-between items-center bg-[#222] p-2.5 rounded-lg">
+                                <div className="flex justify-between items-center bg-white/5 p-2.5 rounded-lg border border-white/5">
                                     <span className="text-[10px] text-gray-400">Скругление</span>
                                     <NumericInput value={activeSlot.borderRadius || 0} onChange={val => admin.updateSlot(activeSlot.id, { borderRadius: val })} className="!w-16 !bg-transparent !border-none" suffix="px" />
                                 </div>
@@ -157,7 +156,7 @@ export const AdminPanelProperties: React.FC<AdminPanelPropertiesProps> = ({ acti
                                 <>
                                     <input ref={admin.slotImageInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => admin.handleSlotDefaultImageChange(e, activeSlot.id)} />
                                     <div className="flex gap-2">
-                                        <button type="button" onClick={() => admin.slotImageInputRef.current?.click()} className="flex-1 p-2.5 bg-[#222] hover:bg-[#2a2a2a] rounded-lg text-[10px] flex items-center justify-center gap-2 border border-white/5 transition-colors">
+                                        <button type="button" onClick={() => admin.slotImageInputRef.current?.click()} className="flex-1 p-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-[10px] flex items-center justify-center gap-2 border border-white/5 transition-colors">
                                             <Icons.Image size={13} /> {activeSlot.defaultContent ? 'Заменить фото' : 'Загрузить фото'}
                                         </button>
                                         {activeSlot.defaultContent && (
@@ -165,7 +164,7 @@ export const AdminPanelProperties: React.FC<AdminPanelPropertiesProps> = ({ acti
                                         )}
                                     </div>
                                     {activeSlot.defaultContent && (
-                                        <div className="rounded-lg overflow-hidden border border-white/10 aspect-video max-h-24 bg-[#222]">
+                                        <div className="rounded-lg overflow-hidden border border-white/10 aspect-video max-h-24 bg-white/5">
                                             <img src={activeSlot.defaultContent} alt="" className="w-full h-full object-contain" />
                                         </div>
                                     )}
@@ -176,7 +175,7 @@ export const AdminPanelProperties: React.FC<AdminPanelPropertiesProps> = ({ acti
                                         value={activeSlot.defaultContent ?? ''}
                                         onChange={e => admin.updateSlot(activeSlot.id, { defaultContent: e.target.value || undefined })}
                                         placeholder="Текст по умолчанию в шаблоне"
-                                        className="w-full bg-[#222] border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder-gray-500 focus:ring-1 focus:ring-blue-500 outline-none min-h-[60px] resize-y"
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder-gray-500 focus:ring-1 focus:ring-blue-500 outline-none min-h-[60px] resize-y"
                                         rows={2}
                                     />
 
@@ -190,7 +189,7 @@ export const AdminPanelProperties: React.FC<AdminPanelPropertiesProps> = ({ acti
                                             <select
                                                 value={activeSlot.defaultSettings?.fontFamily || ''}
                                                 onChange={e => admin.updateSlot(activeSlot.id, { defaultSettings: { ...activeSlot.defaultSettings, fontFamily: e.target.value || undefined } })}
-                                                className="w-full text-[11px] bg-[#222] border border-white/10 rounded-lg p-2 text-white outline-none focus:ring-1 focus:ring-blue-500"
+                                                className="w-full text-[11px] bg-white/5 border border-white/10 rounded-lg p-2 text-white outline-none focus:ring-1 focus:ring-blue-500"
                                             >
                                                 <option value="">По умолчанию (тема)</option>
                                                 <option value="Inter, sans-serif">Inter</option>
@@ -228,7 +227,7 @@ export const AdminPanelProperties: React.FC<AdminPanelPropertiesProps> = ({ acti
                                                         type="text"
                                                         value={activeSlot.defaultSettings?.color || '#000000'}
                                                         onChange={e => admin.updateSlot(activeSlot.id, { defaultSettings: { ...activeSlot.defaultSettings, color: e.target.value } })}
-                                                        className="w-[72px] font-mono text-[10px] bg-[#222] border border-white/10 rounded-lg px-1.5 py-1.5 text-white outline-none focus:ring-1 focus:ring-blue-500"
+                                                        className="w-[72px] font-mono text-[10px] bg-white/5 border border-white/10 rounded-lg px-1.5 py-1.5 text-white outline-none focus:ring-1 focus:ring-blue-500"
                                                     />
                                                 </div>
                                             </div>
@@ -238,19 +237,19 @@ export const AdminPanelProperties: React.FC<AdminPanelPropertiesProps> = ({ acti
                                         <div className="flex gap-1.5">
                                             <button
                                                 onClick={() => admin.updateSlot(activeSlot.id, { defaultSettings: { ...activeSlot.defaultSettings, fontWeight: activeSlot.defaultSettings?.fontWeight === 'bold' ? 'normal' : 'bold' } })}
-                                                className={`flex-1 p-2 rounded-lg text-[10px] font-bold transition-colors border ${activeSlot.defaultSettings?.fontWeight === 'bold' ? 'bg-blue-600/20 border-blue-500/30 text-blue-300' : 'bg-[#222] border-white/5 text-gray-400 hover:bg-[#2a2a2a]'}`}
+                                                className={`flex-1 p-2 rounded-lg text-[10px] font-bold transition-colors border ${activeSlot.defaultSettings?.fontWeight === 'bold' ? 'bg-blue-600/20 border-blue-500/30 text-blue-300' : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'}`}
                                             >
                                                 <strong>B</strong>
                                             </button>
                                             <button
                                                 onClick={() => admin.updateSlot(activeSlot.id, { defaultSettings: { ...activeSlot.defaultSettings, fontStyle: activeSlot.defaultSettings?.fontStyle === 'italic' ? 'normal' : 'italic' } })}
-                                                className={`flex-1 p-2 rounded-lg text-[10px] transition-colors border ${activeSlot.defaultSettings?.fontStyle === 'italic' ? 'bg-blue-600/20 border-blue-500/30 text-blue-300' : 'bg-[#222] border-white/5 text-gray-400 hover:bg-[#2a2a2a]'}`}
+                                                className={`flex-1 p-2 rounded-lg text-[10px] transition-colors border ${activeSlot.defaultSettings?.fontStyle === 'italic' ? 'bg-blue-600/20 border-blue-500/30 text-blue-300' : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'}`}
                                             >
                                                 <em>I</em>
                                             </button>
                                             <button
                                                 onClick={() => admin.updateSlot(activeSlot.id, { defaultSettings: { ...activeSlot.defaultSettings, uppercase: !activeSlot.defaultSettings?.uppercase } })}
-                                                className={`flex-1 p-2 rounded-lg text-[10px] transition-colors border ${activeSlot.defaultSettings?.uppercase ? 'bg-blue-600/20 border-blue-500/30 text-blue-300' : 'bg-[#222] border-white/5 text-gray-400 hover:bg-[#2a2a2a]'}`}
+                                                className={`flex-1 p-2 rounded-lg text-[10px] transition-colors border ${activeSlot.defaultSettings?.uppercase ? 'bg-blue-600/20 border-blue-500/30 text-blue-300' : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'}`}
                                             >
                                                 AA
                                             </button>
@@ -264,7 +263,7 @@ export const AdminPanelProperties: React.FC<AdminPanelPropertiesProps> = ({ acti
                                                     <button
                                                         key={align}
                                                         onClick={() => admin.updateSlot(activeSlot.id, { defaultSettings: { ...activeSlot.defaultSettings, align } })}
-                                                        className={`flex-1 p-2 rounded-lg text-[9px] font-bold transition-colors border ${(activeSlot.defaultSettings?.align || 'left') === align ? 'bg-blue-600/20 border-blue-500/30 text-blue-300' : 'bg-[#222] border-white/5 text-gray-400 hover:bg-[#2a2a2a]'}`}
+                                                        className={`flex-1 p-2 rounded-lg text-[9px] font-bold transition-colors border ${(activeSlot.defaultSettings?.align || 'left') === align ? 'bg-blue-600/20 border-blue-500/30 text-blue-300' : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'}`}
                                                     >
                                                         {label}
                                                     </button>
@@ -280,7 +279,7 @@ export const AdminPanelProperties: React.FC<AdminPanelPropertiesProps> = ({ acti
                                                     <button
                                                         key={vAlign}
                                                         onClick={() => admin.updateSlot(activeSlot.id, { defaultSettings: { ...activeSlot.defaultSettings, verticalAlign: vAlign } })}
-                                                        className={`flex-1 p-2 rounded-lg text-[9px] font-bold transition-colors border ${(activeSlot.defaultSettings?.verticalAlign || 'top') === vAlign ? 'bg-blue-600/20 border-blue-500/30 text-blue-300' : 'bg-[#222] border-white/5 text-gray-400 hover:bg-[#2a2a2a]'}`}
+                                                        className={`flex-1 p-2 rounded-lg text-[9px] font-bold transition-colors border ${(activeSlot.defaultSettings?.verticalAlign || 'top') === vAlign ? 'bg-blue-600/20 border-blue-500/30 text-blue-300' : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'}`}
                                                     >
                                                         {label}
                                                     </button>
@@ -320,9 +319,9 @@ export const AdminPanelProperties: React.FC<AdminPanelPropertiesProps> = ({ acti
                         <div className="space-y-3 pt-4 border-t border-white/5">
                             <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Действия</h4>
                             <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => admin.moveLayer('front')} className="p-2.5 bg-[#222] hover:bg-[#2a2a2a] rounded-lg text-[10px] flex items-center justify-center gap-1.5 border border-white/5 transition-colors"><ArrowUp size={11} /> Вперёд</button>
-                                <button onClick={() => admin.moveLayer('back')} className="p-2.5 bg-[#222] hover:bg-[#2a2a2a] rounded-lg text-[10px] flex items-center justify-center gap-1.5 border border-white/5 transition-colors"><ArrowDown size={11} /> Назад</button>
-                                <button onClick={() => admin.duplicateSlot(activeSlot)} className="p-2.5 bg-[#222] hover:bg-[#2a2a2a] rounded-lg text-[10px] flex items-center justify-center gap-1.5 border border-white/5 transition-colors"><Copy size={11} /> Копия</button>
+                                <button onClick={() => admin.moveLayer('front')} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-[10px] flex items-center justify-center gap-1.5 border border-white/5 transition-colors"><ArrowUp size={11} /> Вперёд</button>
+                                <button onClick={() => admin.moveLayer('back')} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-[10px] flex items-center justify-center gap-1.5 border border-white/5 transition-colors"><ArrowDown size={11} /> Назад</button>
+                                <button onClick={() => admin.duplicateSlot(activeSlot)} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-[10px] flex items-center justify-center gap-1.5 border border-white/5 transition-colors"><Copy size={11} /> Копия</button>
                                 <button onClick={() => admin.removeSlot(activeSlot.id)} className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-[10px] flex items-center justify-center gap-1.5 border border-red-500/10 transition-colors"><Trash2 size={11} /> Удалить</button>
                             </div>
                         </div>

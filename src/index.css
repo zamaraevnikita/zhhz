@@ -1,3 +1,114 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --font-syncopate: 'Syncopate', 'Arial Black', sans-serif;
+  --font-astrum: 'Astrum Cyrillic', sans-serif;
+  --font-inter: 'Inter', sans-serif;
+  --spacing-page: clamp(24px, 4vw, 77px);
+}
+
+@layer base {
+  body {
+    @apply antialiased text-gray-800 bg-gray-50;
+  }
+}
+
+@font-face {
+  font-family: 'Syncopate';
+  src: url('./assets/Syncopate-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  unicode-range: U+0000-024F;
+}
+
+@font-face {
+  font-family: 'Syncopate';
+  src: url('./assets/Syncopate Bold Cyr.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Syncopate';
+  src: url('./assets/Syncopate Bold Cyr.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  unicode-range: U+0400-04FF, U+0020-002F, U+003A-0040, U+005B-0060, U+007B-007E;
+}
+
+@font-face {
+  font-family: 'Astrum Cyrillic';
+  src: url('./assets/AstrumScriptCyrillic_Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Astrum Cyrillic';
+  src: url('./assets/AstrumScriptCyrillic_Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Astrum Cyrillic';
+  src: url('./assets/AstrumScriptCyrillic_Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('./assets/Inter-VariableFont_opsz,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('./assets/Inter-Italic-VariableFont_opsz,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: italic;
+}
+
+:root {
+  --page-gutter: clamp(24px, 4vw, 77px);
+  --topics-arrow-offset: 31px;
+}
+
+/* Scoped Landing Page overrides */
+.landing-page {
+  font-family: 'Helvetica', 'Arial', sans-serif;
+  background: #fff;
+  color: #000;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.landing-page a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* Global layout containers for landing */
+.page-container {
+  width: 100%;
+  max-width: 1920px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.nav-container {
+  width: 100%;
+  max-width: 1920px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Components CSS ported from hard_verst */
+.topics {
+  position: relative;
+  width: 100%;
+  padding: 80px var(--page-gutter);
+  text-align: center;
+}
